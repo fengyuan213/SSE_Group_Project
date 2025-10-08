@@ -32,7 +32,7 @@ flask run --port 5000 (verify it's working correctly; check below)
 ## Manual run (terminals)
 Backend: <br>
   cd backend<br>
-  .\\.venv\\Scripts\\activate<br>
+  \.venv\Scripts\activate<br>
   flask run --port 5000<br>
   Backend:  http://localhost:5000/api/health<br>
 
