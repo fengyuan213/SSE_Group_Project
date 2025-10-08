@@ -15,14 +15,14 @@ git clone https://github.com/fengyuan213/SSE_Group_Project.git <br>
 cd SSE_Group_Project <br>
 
 ### Frontend
-cd /frontend <br>
+cd frontend <br>
 npm install <br>
 npm run dev (verify it's working correctly; check Manual run (terminals))
 
 ### Backend
 cd backend <br>
 python -m venv .venv <br>
-.\.venv\Scripts\activate
+\.venv\Scripts\activate
 
 ### Install required packages
 pip install -r requirements.txt
