@@ -4,10 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev":"vite","build":"tsc -b && vite build","preview":"vite preview","lint":"eslint . --ext .ts,.tsx",
+    "setup": "npm install",
+    "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rimraf dist node_modules"
   },
   "dependencies": {
     "axios": "^1.12.2",

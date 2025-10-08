@@ -1,0 +1,28 @@
+{
+  "include": [
+    "app"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/.venv",
+    "**/venv",
+    "**/.turbo",
+    "**/node_modules"
+  ],
+  "pythonVersion": "3.13",
+  "venv": ".venv",
+  "venvPath": ".",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": true,
+  "reportMissingTypeStubs": false,
+  "reportUnusedImport": true,
+  "reportUnusedVariable": true,
+  "reportDuplicateImport": true,
+  "reportUntypedFunctionDecorator": false,
+  "reportUntypedClassDecorator": false,
+  "reportPrivateUsage": false,
+  "strictListInference": false,
+  "strictDictionaryInference": false,
+  "strictSetInference": false
+}
+

@@ -1,0 +1,13 @@
+{
+    "name": "backend",
+    "private": true,  
+    "scripts": {
+        "setup": "node scripts/setup.js",
+        "dev": "node scripts/dev.js",
+        "build": "node scripts/build.js",
+        "lint": "node scripts/lint.js",
+        "type-check": "node scripts/typecheck.js",
+        "clean": "node scripts/clean.js"
+      }
+}
+  

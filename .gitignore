@@ -1,15 +1,31 @@
-# Node
+# Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.env
 
-# Python
+# Backend
 backend/.venv/
 backend/__pycache__/
-backend/*.pyc
+backend/**/__pycache__/
+backend/**/*.pyc
+**.pyc
+# Root (don't commit root node_modules if using scripts)
+node_modules/
 
-# Envs
+# Environment files
 **/.env
+.env.local
+.env.*.local
 
 # OS
 .DS_Store
+Thumbs.db
 *.log
+
+# IDE
+#.vscode/settings.json
+.idea/
+*.swp
+*.swo
+# Turbo momorepo build system
+**/.turbo/

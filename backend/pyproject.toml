@@ -1,0 +1,80 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend API for SSE Group Project"
+requires-python = ">=3.10"
+
+[tool.pylint.main]
+# Specify a score threshold under which the program will exit with error
+fail-under = 8.0
+
+# Add files or directories to the ignore list
+ignore = [".venv", "venv", "__pycache__", "node_modules", ".turbo"]
+
+# Use multiple processes to speed up Pylint
+jobs = 0  # Use all available CPUs
+
+[tool.pylint.messages_control]
+# Disable specific warnings that are too strict for typical Flask apps
+disable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",
+    "invalid-name",
+]
+
+[tool.pylint.format]
+# Maximum number of characters on a single line
+max-line-length = 100
+
+# String used for indentation
+indent-string = "    "
+
+[tool.pylint.basic]
+# Good variable names which should always be accepted
+good-names = ["i", "j", "k", "ex", "Run", "_", "id", "app", "db", "bp"]
+
+[tool.pylint.design]
+# Maximum number of arguments for function / method
+max-args = 7
+
+# Maximum number of attributes for a class
+max-attributes = 10
+
+[tool.pyright]
+# Include and exclude patterns
+include = ["app"]
+exclude = [
+    "**/__pycache__",
+    "**/.venv",
+    "**/venv",
+    "**/.turbo",
+    "**/node_modules"
+]
+
+# Python version
+pythonVersion = "3.13"
+
+# Virtual environment
+venv = ".venv"
+venvPath = "."
+
+# Type checking mode: "off", "basic", or "strict"
+typeCheckingMode = "basic"
+
+# Report settings
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedVariable = true
+reportDuplicateImport = true
+reportUntypedFunctionDecorator = false
+reportUntypedClassDecorator = false
+reportPrivateUsage = false
+
+# Diagnostics
+strictListInference = false
+strictDictionaryInference = false
+strictSetInference = false
+
