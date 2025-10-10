@@ -1,16 +1,20 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["DATABASE_URL", "NODE_ENV", "FLASK_PORT", "VITE_PORT"],
+  "globalPassThroughEnv": ["DATABASE_URL", "FLASK_PORT", "VITE_PORT"],
   "tasks": {
     "setup": {
       "cache": false
     },
     "dev": {
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "env": ["DATABASE_URL", "NODE_ENV", "FLASK_PORT", "VITE_PORT"]
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
+      "env": ["DATABASE_URL", "NODE_ENV"]
     },
     "lint": {
       "dependsOn": ["^lint"]

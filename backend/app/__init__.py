@@ -3,6 +3,7 @@ from flask import Flask
 from flask_cors import CORS
 from .api import api_bp
 
+
 def create_app():
     app = Flask(__name__)
     # CORS for the Vite dev server
@@ -15,5 +16,6 @@ def create_app():
         return "Backend is running. Try /api/health"
 
     return app
+
 
 app = create_app()

@@ -39,19 +39,26 @@ A modern full-stack web application with React (TypeScript) frontend and Flask (
 # Clone the repository
 git clone https://github.com/fengyuan213/SSE_Group_Project.git
 cd SSE_Group_Project
-# Do folloing in the root directory!!!!
-npm install
-# One command does it all! for setup everything including python venv python libraries, frontended dependencies etc
+
+# Setup environment (one-time)
+cp env.example .env
+# Edit .env with your database credentials
+
+# Install dependencies (one-time)
 npm run setup
 # This installs all dependencies for BOTH frontend and backend
 # Creates Python virtual environment (.venv)
 # Sets up everything you need
 
+# Import database schema (one-time)
+npm run db:import
+
 # Start both servers in parallel!
 npm run dev
 
-
-
+# OR run them separately:
+npm run dev:backend   # Backend only
+npm run dev:frontend  # Frontend only
 ```
 
 ### Configure VS Code Python Interpreter
@@ -64,8 +71,191 @@ After setup, configure your Python interpreter:
 
 ### Access Your Application
 
-- **Frontend:** http://localhost:5173
-- **Backend API:** http://localhost:5000
+- **Frontend:** http://localhost:5173 (configurable via `VITE_PORT` in `.env`)
+- **Backend API:** http://localhost:5000 (configurable via `FLASK_PORT` in `.env`)
+
+### Running Services Independently
+
+You can run frontend and backend separately:
+
+```bash
+# Terminal 1 - Backend only
+npm run dev:backend
+
+# Terminal 2 - Frontend only  
+npm run dev:frontend
+```
+
+---
+
+## 🗄️ Database Setup
+
+### Prerequisites
+- **PostgreSQL** installed locally OR access to a remote PostgreSQL server
+- **psql** command-line tool (comes with PostgreSQL)
+
+### Quick Import (3 Steps)
+
+#### 1. Configure Database URL
+Create a `.env` file in the **root directory**:
+
+```bash
+# Copy the template
+cp env.example .env  # Linux/Mac
+# OR
+copy env.example .env  # Windows
+
+# Edit .env with your database credentials
+# (Skip editing if you want to use the default remote shared db)
+```
+
+Your `.env` file should contain:
+```bash
+DATABASE_URL="postgresql://username:password@host:port/database"
+```
+
+**Examples:**
+```bash
+# Remote database (default in template)
+DATABASE_URL="postgresql://admin:adminpassword@db.fengy.cc:6666/group_project"
+
+# Local database
+DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/home_services"
+```
+
+> **💡 Monorepo Environment Variables:**  
+> The root `.env` file is automatically loaded by:
+> - **Turborepo**: Configured in `turbo.json` to pass `DATABASE_URL` to all tasks
+> - **npm scripts**: Shell access to `${DATABASE_URL}` from root
+
+#### 2. Import Schema
+From the **root folder**, run:
+
+```bash
+npm run db:import
+```
+
+That's it! The schema will be imported to your configured database.
+
+#### 3. Verify Import
+```bash
+# Check tables were created
+psql "${DATABASE_URL}" -c "\dt"
+```
+
+You should see 20+ tables including `users`, `bookings`, `payments`, `feedback`, etc.
+
+---
+
+### Alternative: Direct psql Command
+
+If you prefer not to use npm:
+
+```bash
+psql "postgresql://your-connection-string" -f backend/schema/database_schema.sql
+```
+
+### Alternative: Using pgAdmin (GUI)
+1. Open **pgAdmin**
+2. Connect to your PostgreSQL server
+3. Right-click on your database → **Query Tool**
+4. **File** → **Open** → Select `backend/schema/database_schema.sql`
+5. Click **Execute** (▶️) or press `F5`
+
+---
+
+### Schema Features
+✅ Auth0 user management with UUID  
+✅ Service packages and providers  
+✅ Booking system with restrictions  
+✅ Payment and confirmation tracking  
+✅ Audit logs and feedback  
+✅ Sample data included for testing  
+
+---
+
+## 🔐 Environment Variables in Monorepo
+
+### How It Works
+
+The root `.env` file is shared across all packages:
+
+```
+Root .env
+    ├─→ Backend (Flask)
+    │   └─ dev.js reads FLASK_PORT → flask run --port 5000
+    │
+    ├─→ Frontend (Vite)
+    │   ├─ vite.config.ts reads VITE_PORT → server port
+    │   └─ vite.config.ts reads FLASK_PORT → proxy target
+    │
+    ├─→ Turborepo Tasks
+    │   └─ Configured in turbo.json
+    │   └─ Passes DATABASE_URL, FLASK_PORT, VITE_PORT to all tasks
+    │
+    └─→ Root npm scripts
+        └─ Shell access: ${DATABASE_URL}
+        └─ Example: npm run db:import
+```
+
+### Adding New Environment Variables
+
+1. **Add to `env.example`** (for documentation)
+2. **Add to `turbo.json`** under `globalEnv` (if needed by tasks)
+3. **Update your `.env`** with the actual value
+
+Example:
+```bash
+# In env.example
+NEW_API_KEY="your-api-key-here"
+
+# In turbo.json
+"globalEnv": ["DATABASE_URL", "NODE_ENV", "NEW_API_KEY"]
+```
+
+### Port Configuration
+
+Both frontend and backend ports are configurable via `.env`:
+
+```bash
+# .env
+FLASK_PORT=5000    # Backend Flask server port
+VITE_PORT=5173     # Frontend Vite dev server port
+```
+
+**How it works:**
+- `backend/scripts/dev.js` reads `FLASK_PORT` and starts Flask on that port
+- `frontend/vite.config.ts` reads `VITE_PORT` for the dev server
+- Vite proxy automatically uses `FLASK_PORT` to connect to backend
+
+**Example - Run on different ports:**
+```bash
+# In .env
+FLASK_PORT=3000
+VITE_PORT=8080
+
+# Start servers
+npm run dev
+
+# Access:
+# Frontend: http://localhost:8080
+# Backend:  http://localhost:3000
+```
+
+### Frontend Environment Variables
+
+Vite requires the `VITE_` prefix for client-side access:
+
+```bash
+# .env
+VITE_API_URL="http://localhost:5000"  # ✅ Accessible in React
+DATABASE_URL="postgresql://..."        # ❌ Not accessible in React (backend only)
+```
+
+Access in React:
+```typescript
+const apiUrl = import.meta.env.VITE_API_URL;
+```
 
 ---
 
@@ -100,10 +290,13 @@ SSE_Group_Project/
 
 #### Root Level (Monorepo)
 ```bash
-npm run dev        # Start both frontend & backend in parallel
-npm run setup      # Setup both projects (install deps, create venv)
-npm run build      # Build both projects
-npm run clean      # Clean build artifacts and dependencies
+npm run dev              # Start both frontend & backend in parallel
+npm run dev:backend      # Start backend only (Flask on port from FLASK_PORT)
+npm run dev:frontend     # Start frontend only (Vite on port from VITE_PORT)
+npm run setup            # Setup both projects (install deps, create venv)
+npm run build            # Build both projects
+npm run clean            # Clean build artifacts and dependencies
+npm run db:import        # Import database schema (uses DATABASE_URL from .env)
 ```
 
 #### Frontend Only

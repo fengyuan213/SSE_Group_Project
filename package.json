@@ -10,9 +10,12 @@
     "scripts": {
         "setup": "turbo run setup",
         "dev": "turbo run dev",
+        "dev:backend": "turbo run dev --filter=backend",
+        "dev:frontend": "turbo run dev --filter=frontend",
         "build": "turbo build",
         "lint": "turbo lint",
-        "clean": "turbo clean && rimraf node_modules"
+        "clean": "turbo clean && rimraf node_modules",
+        "db:import": "psql \"${DATABASE_URL}\" -f backend/schema/database_schema.sql"
     },
     "devDependencies": {
         "turbo": "^2.5.8"
