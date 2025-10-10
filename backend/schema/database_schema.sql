@@ -375,7 +375,7 @@ CREATE TRIGGER update_payments_updated_at BEFORE UPDATE ON payments FOR EACH ROW
 CREATE TRIGGER update_feedback_updated_at BEFORE UPDATE ON feedback FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================
--- DATA RETENTION: Automated Cleanup Function (Module 1.4)
+-- DATA RETENTION: Automated Cleanup Function (Module 1.4) -done
 -- ============================================================================
 CREATE TABLE data_retention_policies (
     data_type VARCHAR(100) PRIMARY KEY,      -- e.g. 'personal_data', 'bookings', 'audit_logs'
