@@ -11,6 +11,9 @@ on:
       - '.github/workflows/build-devcontainer.yml'
   workflow_dispatch: # Allow manual trigger
 
+# Only allow specific users or manual triggers to actually build
+# Others' pushes will be skipped
+
 env:
   REGISTRY: ghcr.io
   # Convert repository name to lowercase for Docker registry compatibility
@@ -19,6 +22,10 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    # Only run if: manually triggered OR pushed by fengyuan213 OR specific commit message contains [build]
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      contains(github.event.head_commit.message, '[build]')
     permissions:
       contents: read
       packages: write
