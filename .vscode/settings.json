@@ -1,48 +1,35 @@
 {
-    // Python settings
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/backend"
-    ],
-    "python.envFile": "${workspaceFolder}/backend/.env",
-    // TypeScript/JavaScript settings
-    //"typescript.tsdk": "frontend/node_modules/typescript/lib",
-    "typescript.enablePromptUseWorkspaceTsdk": true,
-    // Editor settings
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-        "source.fixAll.eslint": "explicit"
-    },
-    // File associations
-    "files.associations": {
-        "*.tsx": "typescriptreact",
-        "*.ts": "typescript"
-    },
-    // Exclude from search/files
-    "files.exclude": {
-        "**/__pycache__": true,
-        "**/*.pyc": true,
-        "**/node_modules": true
-    },
-    "search.exclude": {
-        "**/node_modules": true,
-        "**/.venv": true,
-        "**/dist": true
-    },
-    // ESLint settings
-    "eslint.workingDirectories": [
-        "./frontend"
-    ],
-    // Python linting
-    "[python]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true
-    },
-    // TypeScript/React formatting
-    "[typescript]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    },
-    "[typescriptreact]": {
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-    }
+  // Python settings (local workspace-specific)
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+  "python.envFile": "${workspaceFolder}/backend/.env",
+
+  // TypeScript settings
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // Editor settings
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  // File associations
+  "files.associations": {
+    "*.tsx": "typescriptreact",
+    "*.ts": "typescript"
+  },
+
+  // Exclude from search/files
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/*.pyc": true,
+    "**/node_modules": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true
+  },
+
+  // ESLint settings (frontend directory)
+  "eslint.workingDirectories": ["./frontend"]
 }

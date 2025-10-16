@@ -1,0 +1,15 @@
+# Ignore these files to speed up Docker builds
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+.git/
+.env
+.DS_Store
+*.log
+dist/
+build/
+.turbo/
+
+
+

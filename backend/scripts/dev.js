@@ -8,4 +8,6 @@ const python = isWin ? ".venv\\Scripts\\python" : ".venv/bin/python";
 const port = process.env.FLASK_PORT || 5000;
 
 console.log(`🚀 Starting Flask development server on port ${port}...`);
-execSync(`${python} -m flask run --port ${port}`, { stdio: "inherit" });
+execSync(`${python} -m flask run --host=0.0.0.0 --port ${port}`, {
+  stdio: "inherit",
+});

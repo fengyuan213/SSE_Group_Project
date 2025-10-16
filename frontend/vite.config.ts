@@ -11,6 +11,7 @@ export default defineConfig({
     }),
   ],
   server: {
+    host: "0.0.0.0", // Listen on all network interfaces (required for devcontainer)
     port: parseInt(process.env.VITE_PORT || "5173"),
     proxy: {
       "/api": {

@@ -1,20 +1,9 @@
 {
-    "recommendations": [
-        "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "mechatroner.rainbow-csv",
-        "donjayamanne.python-extension-pack",
-        "ms-python.debugpy",
-        "ms-python.pylint",
-        "mikestead.dotenv",
-        "ms-vsliveshare.vsliveshare",
-        "pkief.material-icon-theme",
-        "jakebathman.mysql-syntax",
-        "tgreen7.vs-code-node-require",
-        "leizongmin.node-module-intellisense",
-        "christian-kohler.path-intellisense",
-        "tomoki1207.pdf",
-    ]
+  "recommendations": [
+    // Note: Most extensions are auto-installed via devcontainer.json
+    // These are additional optional extensions for local development
+    "mechatroner.rainbow-csv",
+    "pkief.material-icon-theme",
+    "tomoki1207.pdf"
+  ]
 }

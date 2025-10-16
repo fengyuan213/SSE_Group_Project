@@ -1,0 +1,173 @@
+{
+  "name": "SSE Group Project - Full Stack Development",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  // VS Code customizations
+  "customizations": {
+    "vscode": {
+      // Recommended extensions
+      "extensions": [
+        // Python extensions
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.pylint",
+        "ms-python.debugpy",
+        "donjayamanne.python-extension-pack",
+        "donjayamanne.python-environment-manager",
+        "kevinrose.vsc-python-indent",
+        "njpwerner.autodocstring",
+        "batisteo.vscode-django",
+        "wholroyd.jinja",
+
+        // JavaScript/TypeScript/Node extensions
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-vscode.vscode-typescript-tslint-plugin",
+        "afractal.node-essentials",
+        "christian-kohler.path-intellisense",
+        "leizongmin.node-module-intellisense",
+        "jasonnutter.search-node-modules",
+        "tgreen7.vs-code-node-require",
+        "wix.vscode-import-cost",
+
+        // React extensions
+        "dsznajder.es7-react-js-snippets",
+
+
+
+        // Docker & Kubernetes extensions
+        "ms-azuretools.vscode-docker",
+        "ms-azuretools.vscode-containers",
+
+        // Git & Collaboration extensions
+        "eamodio.gitlens",
+        "github.vscode-pull-request-github",
+        "ms-vsliveshare.vsliveshare",
+
+        // Data & Config extensions
+        "redhat.vscode-yaml",
+        "mikestead.dotenv",
+
+        // Utilities
+        "streetsidesoftware.code-spell-checker",
+        "editorconfig.editorconfig",
+        "gruntfuggly.todo-tree"
+      ],
+
+      // VS Code settings
+      "settings": {
+        // Python settings
+        "python.defaultInterpreterPath": "/workspace/backend/.venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.linting.pyrightEnabled": true,
+        "python.formatting.provider": "black",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+
+        // TypeScript/JavaScript settings
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+
+        // ESLint settings
+        "eslint.validate": [
+          "javascript",
+          "javascriptreact",
+          "typescript",
+          "typescriptreact"
+        ],
+
+        // Editor settings
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "files.eol": "\n",
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+
+        // Terminal settings
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.scrollback": 10000
+      }
+    }
+  },
+
+  // Command to run after container creation
+  "postCreateCommand": "sudo chown -R vscode:vscode /workspace/node_modules /workspace/frontend/node_modules /workspace/backend/.venv 2>/dev/null || true && npm run setup",
+
+  // Port forwarding
+  "forwardPorts": [
+    5173,  // Frontend Vite dev server (default Vite port)
+    5000,  // Backend Flask server
+    5432 // PostgreSQL (local)
+
+  ],
+
+  // Port attributes
+  "portsAttributes": {
+    "5173": {
+      "label": "Frontend (Vite)",
+      "onAutoForward": "notify"
+    },
+    "5000": {
+      "label": "Backend (Flask)",
+      "onAutoForward": "notify"
+    },
+    "5432": {
+      "label": "PostgreSQL Database",
+      "onAutoForward": "silent"
+    }
+  },
+
+  // Disable auto port forwarding to avoid duplicates
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+
+  // Mount points
+  "mounts": [
+    // Cache node_modules for better performance
+    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume",
+    "source=${localWorkspaceFolderBasename}-frontend-node_modules,target=${containerWorkspaceFolder}/frontend/node_modules,type=volume",
+    // Cache Python virtual environment
+    "source=${localWorkspaceFolderBasename}-backend-venv,target=${containerWorkspaceFolder}/backend/.venv,type=volume"
+  ],
+
+  // Environment variables
+  "containerEnv": {
+    "NODE_ENV": "development",
+    "PYTHONUNBUFFERED": "1"
+  },
+
+  // Features
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  // Container runtime user
+  "remoteUser": "vscode"
+}
+

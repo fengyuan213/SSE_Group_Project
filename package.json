@@ -1,28 +1,28 @@
 {
-    "name": "sse-group-project",
-    "version": "1.0.0",
-    "private": true,
-    "description": "React + Flask Full-Stack Application (Turborepo)",
-    "workspaces": [
-        "frontend",
-        "backend"
-    ],
-    "scripts": {
-        "setup": "turbo run setup",
-        "dev": "turbo run dev",
-        "dev:backend": "turbo run dev --filter=backend",
-        "dev:frontend": "turbo run dev --filter=frontend",
-        "build": "turbo build",
-        "lint": "turbo lint",
-        "clean": "turbo clean && rimraf node_modules",
-        "db:import": "psql \"${DATABASE_URL}\" -f backend/schema/database_schema.sql"
-    },
-    "devDependencies": {
-        "turbo": "^2.5.8"
-    },
-    "engines": {
-        "node": ">=18.0.0",
-        "npm": ">=9.0.0"
-    },
-    "packageManager": "npm@9.0.0"
+  "name": "sse-group-project",
+  "version": "1.0.0",
+  "private": true,
+  "description": "React + Flask Full-Stack Application (Turborepo)",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "setup": "turbo run setup && bash .devcontainer/post-setup.sh",
+    "dev": "turbo run dev",
+    "dev:backend": "turbo run dev --filter=backend",
+    "dev:frontend": "turbo run dev --filter=frontend",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean && rimraf node_modules",
+    "db:import": "psql \"${DATABASE_URL}\" -f backend/schema/database_schema.sql"
+  },
+  "dependencies": {
+    "turbo": "^2.5.8"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "packageManager": "npm@9.0.0"
 }
