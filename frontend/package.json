@@ -17,7 +17,10 @@
     "@fontsource/roboto": "^5.2.8",
     "@mui/icons-material": "^6.0.0",
     "@mui/material": "^6.0.0",
+    "@mui/x-date-pickers": "^8.14.0",
+    "@rollup/rollup-darwin-x64": "^4.52.4",
     "axios": "^1.12.2",
+    "dayjs": "^1.11.18",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.3"
