@@ -159,7 +159,10 @@
   // Environment variables
   "containerEnv": {
     "NODE_ENV": "development",
-    "PYTHONUNBUFFERED": "1"
+    "PYTHONUNBUFFERED": "1",
+    // Git configuration (customize these for each user)
+    "GIT_USER_NAME": "${localEnv:GIT_USER_NAME:${localEnv:USER:vscode}}",
+    "GIT_USER_EMAIL": "${localEnv:GIT_USER_EMAIL:vscode@localhost}"
   },
 
   // Features

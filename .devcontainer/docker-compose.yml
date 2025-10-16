@@ -12,8 +12,8 @@ services:
     volumes:
       # Mount entire workspace
       - ..:/workspace:cached
-      # Git configuration
-      - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      # Git configuration (commented out to avoid conflicts, container has its own config)
+      # - ~/.gitconfig:/home/vscode/.gitconfig:ro
       - ~/.ssh:/home/vscode/.ssh:ro
 
     command: sleep infinity

@@ -15,7 +15,7 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "clean": "turbo clean && rimraf node_modules",
-    "db:import": "psql \"${DATABASE_URL}\" -f backend/schema/database_schema.sql"
+    "db:import": "export $(grep -E '^PG' /workspace/.env | xargs) && psql \"${DATABASE_URL}\" -f backend/schema/database_schema.sql"
   },
   "dependencies": {
     "turbo": "^2.5.8"

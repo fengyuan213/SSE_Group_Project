@@ -36,22 +36,30 @@ A modern full-stack web application with React (TypeScript) frontend and Flask (
 - **Docker Desktop** or **Docker Engine** with Docker Compose
   Setup docker goto https://www.docker.com/ download and install docker desktop
 
+**⚡ Docker Optimization:**
+
+- **First-time setup with pre-built image:** ~2-3 minutes (pulls image + installs deps)
+- **First-time setup without image:** ~10-15 minutes (builds image + installs deps)
+- **Subsequent starts:** ~10 seconds (everything is cached)
 - **VS Code** with **Dev Containers extension** (recommended)
 - **Git**
 
 ### Recommended Setup - DevContainer (Use This!)
 
+> 💡 **First Time Setup:** After setup edit `.env` file and set your Git name/email (see step 4 below) if you use git inside the container
+
 **This is the recommended approach** - uses Docker for consistent development environment:
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/fengyuan213/SSE_Group_Project.git
 cd SSE_Group_Project
 
-# Open in VS Code
+
+# 2. Open in VS Code
 code .
 
-# VS Code will detect the devcontainer and prompt you to "Reopen in Container"
+# 3. VS Code will detect the devcontainer and prompt you to "Reopen in Container"
 # Click "Reopen in Container" and wait for the setup to complete
 # This automatically:
 #   • Pulls pre-built Docker image from GitHub Container Registry (30 seconds) ⚡
@@ -62,13 +70,19 @@ code .
 #   • Imports database schema automatically
 #   • Configures PostgreSQL environment variables
 #   • Installs 40+ recommended VS Code extensions automatically
+
+
+# 4. Edit .env and set your Git credentials (IMPORTANT!) Ignore if you do not plan to use git inside container
+# Update these lines in .env:
+#   GIT_USER_NAME="Your Name"
+#   GIT_USER_EMAIL="your.email@example.com"
+# Note: .env is loaded during container setup. To apply changes later, see "Updating .env" section.
+
+# after edit, use this to make the change take effect
+set -a &&  source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//') && set +a  # auto export .env
+
+
 ```
-
-**⚡ Speed Optimization:**
-
-- **First-time setup with pre-built image:** ~2-3 minutes (pulls image + installs deps)
-- **First-time setup without image:** ~10-15 minutes (builds image + installs deps)
-- **Subsequent starts:** ~10 seconds (everything is cached)
 
 ### 🔌 Extensions
 
