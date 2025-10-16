@@ -13,7 +13,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/devcontainer
+  # Convert repository name to lowercase for Docker registry compatibility
+  IMAGE_NAME: ${{ github.repository_owner }}/sse_group_project/devcontainer
 
 jobs:
   build-and-push:
