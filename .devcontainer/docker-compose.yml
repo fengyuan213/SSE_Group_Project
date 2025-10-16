@@ -5,6 +5,11 @@ services:
   app:
     # Use pre-built image from GitHub Container Registry for faster loading
     # Falls back to local build if image is not available
+    #
+    # IMPORTANT: If this builds instead of pulling:
+    #   1. Make sure image is public: https://github.com/fengyuan213?tab=packages
+    #   2. Or run: docker login ghcr.io -u YOUR_GITHUB_USERNAME
+    #   3. Or run: .devcontainer/pull-image.sh before opening container
     image: ghcr.io/fengyuan213/sse_group_project/devcontainer:latest
     build:
       context: .
