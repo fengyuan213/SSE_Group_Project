@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Card,
@@ -12,34 +12,21 @@ import {
   MenuItem,
   Tabs,
   Tab,
-  Grid,
   Alert,
   CircularProgress,
   Chip,
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import type { SelectChangeEvent } from "@mui/material";
 import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
-
-interface ServicePackage {
-  package_id: number;
-  package_name: string;
-  description: string;
-  base_price: number;
-  duration_minutes: number;
-  category_name: string;
-}
-
-interface ServiceProvider {
-  provider_id: number;
-  business_name: string;
-  description: string;
-  address: string;
-  average_rating: number;
-  is_verified: boolean;
-}
+import {
+  bookingApi,
+  type ServicePackage,
+  type ServiceProvider,
+} from "../lib/api";
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -65,13 +52,16 @@ function TabPanel(props: TabPanelProps) {
 export default function Booking() {
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   // Service packages and providers
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>(
+    []
+  );
 
   // Form data
   const [selectedPackage, setSelectedPackage] = useState<string>("");
@@ -82,106 +72,37 @@ export default function Booking() {
   const [serviceAddress, setServiceAddress] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
 
-  // Fetch service packages on mount
-  useEffect(() => {
-    fetchPackages();
-    fetchProviders();
+  // Fetch data functions using centralized API
+  const fetchPackages = useCallback(async () => {
+    try {
+      const data = await bookingApi.getPackages();
+      setPackages(data);
+    } catch (err) {
+      console.error("Error fetching packages:", err);
+      setError("Failed to load service packages.");
+    }
   }, []);
 
-  const fetchPackages = async () => {
+  const fetchProviders = useCallback(async () => {
     try {
-      // Mock data for now - replace with actual API call
-      const mockPackages: ServicePackage[] = [
-        {
-          package_id: 1,
-          package_name: "Basic Plumbing Inspection",
-          description: "Comprehensive plumbing inspection",
-          base_price: 150.0,
-          duration_minutes: 60,
-          category_name: "Plumbing",
-        },
-        {
-          package_id: 2,
-          package_name: "Emergency Leak Repair",
-          description: "Urgent leak repair service",
-          base_price: 300.0,
-          duration_minutes: 120,
-          category_name: "Plumbing",
-        },
-        {
-          package_id: 3,
-          package_name: "Electrical Safety Check",
-          description: "Full electrical safety inspection",
-          base_price: 200.0,
-          duration_minutes: 90,
-          category_name: "Electrical",
-        },
-        {
-          package_id: 4,
-          package_name: "AC Maintenance",
-          description: "Air conditioning service and maintenance",
-          base_price: 180.0,
-          duration_minutes: 90,
-          category_name: "HVAC",
-        },
-      ];
-      setPackages(mockPackages);
+      const data = await bookingApi.getProviders();
+      setProviders(data);
+      setFilteredProviders(data);
     } catch (err) {
-      setError("Failed to load service packages");
+      console.error("Error fetching providers:", err);
+      setError("Failed to load service providers.");
     }
-  };
+  }, []);
 
-  const fetchProviders = async () => {
-    try {
-      // Mock data for now - replace with actual API call
-      const mockProviders: ServiceProvider[] = [
-        {
-          provider_id: 1,
-          business_name: "PlumberPro Ltd",
-          description: "Expert plumbing and emergency repairs",
-          address: "London, UK",
-          average_rating: 4.8,
-          is_verified: true,
-        },
-        {
-          provider_id: 2,
-          business_name: "ElectroFix Co.",
-          description: "Electrical installation and troubleshooting",
-          address: "Birmingham, UK",
-          average_rating: 4.5,
-          is_verified: true,
-        },
-        {
-          provider_id: 3,
-          business_name: "HVAC Expert Solutions",
-          description: "Air conditioning and heating systems",
-          address: "Manchester, UK",
-          average_rating: 4.7,
-          is_verified: true,
-        },
-        {
-          provider_id: 4,
-          business_name: "CleanHome Services",
-          description: "Home deep cleaning and sanitation",
-          address: "Bristol, UK",
-          average_rating: 4.6,
-          is_verified: true,
-        },
-        {
-          provider_id: 5,
-          business_name: "Quick Maintenance",
-          description: "General repairs and maintenance",
-          address: "Edinburgh, UK",
-          average_rating: 4.9,
-          is_verified: true,
-        },
-      ];
-      setProviders(mockProviders);
-      setFilteredProviders(mockProviders);
-    } catch (err) {
-      setError("Failed to load service providers");
-    }
-  };
+  // Fetch service packages and providers on mount
+  useEffect(() => {
+    const loadData = async () => {
+      setInitialLoading(true);
+      await Promise.all([fetchPackages(), fetchProviders()]);
+      setInitialLoading(false);
+    };
+    loadData();
+  }, [fetchPackages, fetchProviders]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -190,19 +111,26 @@ export default function Booking() {
     resetForm();
   };
 
-  const handlePackageChange = (event: SelectChangeEvent<string>) => {
-    const packageId = event.target.value;
-    setSelectedPackage(packageId);
-    
-    // Filter providers based on selected package category
-    const selectedPkg = packages.find(
-      (pkg) => pkg.package_id.toString() === packageId
-    );
-    if (selectedPkg) {
-      // In a real app, filter providers by the service category
-      setFilteredProviders(providers);
-    }
-  };
+  const handlePackageChange = useCallback(
+    (event: SelectChangeEvent<string>) => {
+      const packageId = event.target.value;
+      setSelectedPackage(packageId);
+
+      // Filter providers based on selected package category
+      const selectedPkg = packages.find(
+        (pkg) => pkg.package_id.toString() === packageId
+      );
+
+      if (selectedPkg && selectedPkg.category_id) {
+        // Filter providers that offer services in the selected category
+        // For now, show all providers - in production this would filter by category
+        setFilteredProviders(providers);
+      } else {
+        setFilteredProviders(providers);
+      }
+    },
+    [packages, providers]
+  );
 
   const resetForm = () => {
     setSelectedPackage("");
@@ -223,14 +151,22 @@ export default function Booking() {
         (pkg) => pkg.package_id.toString() === selectedPackage
       );
 
-      // Mock booking submission - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const bookingData = {
+        package_id: Number(selectedPackage),
+        booking_type: "non-urgent",
+        scheduled_date: scheduledDate?.toISOString() || "",
+        service_address: serviceAddress,
+        special_instructions: specialInstructions || null,
+      };
+
+      const response = await bookingApi.createBooking(bookingData);
 
       setSuccess(
-        `Booking created successfully! We'll match you with a provider for ${selectedPkg?.package_name}.`
+        `Booking created successfully! Reference: ${response.booking_reference}. We'll match you with a provider for ${selectedPkg?.package_name}.`
       );
       resetForm();
     } catch (err) {
+      console.error("Error creating booking:", err);
       setError("Failed to create booking. Please try again.");
     } finally {
       setLoading(false);
@@ -251,14 +187,23 @@ export default function Booking() {
         (pkg) => pkg.package_id.toString() === selectedPackage
       );
 
-      // Mock booking submission - replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const bookingData = {
+        package_id: Number(selectedPackage),
+        provider_id: Number(selectedProvider),
+        booking_type: "non-urgent",
+        scheduled_date: scheduledDate?.toISOString() || "",
+        service_address: serviceAddress,
+        special_instructions: specialInstructions || null,
+      };
+
+      const response = await bookingApi.createBooking(bookingData);
 
       setSuccess(
-        `Booking created successfully with ${selectedProv?.business_name} for ${selectedPkg?.package_name}!`
+        `Booking created successfully! Reference: ${response.booking_reference}. Booked with ${selectedProv?.business_name} for ${selectedPkg?.package_name}!`
       );
       resetForm();
     } catch (err) {
+      console.error("Error creating booking:", err);
       setError("Failed to create booking. Please try again.");
     } finally {
       setLoading(false);
@@ -267,7 +212,7 @@ export default function Booking() {
 
   const renderCommonFields = () => (
     <>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <DateTimePicker
             label="Preferred Date & Time"
@@ -284,7 +229,7 @@ export default function Booking() {
         </LocalizationProvider>
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={12}>
         <TextField
           fullWidth
           label="Service Address"
@@ -297,7 +242,7 @@ export default function Booking() {
         />
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={12}>
         <TextField
           fullWidth
           label="Special Instructions (Optional)"
@@ -311,13 +256,27 @@ export default function Booking() {
     </>
   );
 
+  if (initialLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         Book a Home Service
       </Typography>
       <Typography color="text.secondary" paragraph>
-        Choose between booking a general service or selecting a specific service provider
+        Choose between booking a general service or selecting a specific service
+        provider
       </Typography>
 
       <Card>
@@ -333,13 +292,21 @@ export default function Booking() {
           </Tabs>
 
           {error && (
-            <Alert severity="error" sx={{ mt: 2 }} onClose={() => setError(null)}>
+            <Alert
+              severity="error"
+              sx={{ mt: 2 }}
+              onClose={() => setError(null)}
+            >
               {error}
             </Alert>
           )}
 
           {success && (
-            <Alert severity="success" sx={{ mt: 2 }} onClose={() => setSuccess(null)}>
+            <Alert
+              severity="success"
+              sx={{ mt: 2 }}
+              onClose={() => setSuccess(null)}
+            >
               {success}
             </Alert>
           )}
@@ -348,14 +315,14 @@ export default function Booking() {
           <TabPanel value={tabValue} index={0}>
             <form onSubmit={handleGeneralBooking}>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Alert severity="info">
-                    Select a service package and we'll match you with an available provider
-                    in your area.
+                    Select a service package and we'll match you with an
+                    available provider in your area.
                   </Alert>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <FormControl fullWidth required>
                     <InputLabel>Service Package</InputLabel>
                     <Select
@@ -364,9 +331,17 @@ export default function Booking() {
                       label="Service Package"
                     >
                       {packages.map((pkg) => (
-                        <MenuItem key={pkg.package_id} value={pkg.package_id.toString()}>
+                        <MenuItem
+                          key={pkg.package_id}
+                          value={pkg.package_id.toString()}
+                        >
                           <Box sx={{ width: "100%" }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
                               <Typography variant="body1">
                                 {pkg.package_name}
                               </Typography>
@@ -376,8 +351,12 @@ export default function Booking() {
                                 color="primary"
                               />
                             </Box>
-                            <Typography variant="caption" color="text.secondary">
-                              {pkg.description} • {pkg.duration_minutes} min • {pkg.category_name}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {pkg.description} • {pkg.duration_minutes} min •{" "}
+                              {pkg.category_name}
                             </Typography>
                           </Box>
                         </MenuItem>
@@ -388,7 +367,7 @@ export default function Booking() {
 
                 {renderCommonFields()}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Button
                     type="submit"
                     variant="contained"
@@ -407,13 +386,13 @@ export default function Booking() {
           <TabPanel value={tabValue} index={1}>
             <form onSubmit={handleProviderBooking}>
               <Grid container spacing={3}>
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Alert severity="info">
                     Choose a specific service provider and the service you need.
                   </Alert>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <FormControl fullWidth required>
                     <InputLabel>Service Provider</InputLabel>
                     <Select
@@ -427,7 +406,13 @@ export default function Booking() {
                           value={provider.provider_id.toString()}
                         >
                           <Box sx={{ width: "100%" }}>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1,
+                              }}
+                            >
                               <Typography variant="body1">
                                 {provider.business_name}
                               </Typography>
@@ -444,7 +429,10 @@ export default function Booking() {
                                 size="small"
                               />
                             </Box>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {provider.description} • {provider.address}
                             </Typography>
                           </Box>
@@ -454,7 +442,7 @@ export default function Booking() {
                   </FormControl>
                 </Grid>
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <FormControl fullWidth required>
                     <InputLabel>Service Package</InputLabel>
                     <Select
@@ -463,9 +451,17 @@ export default function Booking() {
                       label="Service Package"
                     >
                       {packages.map((pkg) => (
-                        <MenuItem key={pkg.package_id} value={pkg.package_id.toString()}>
+                        <MenuItem
+                          key={pkg.package_id}
+                          value={pkg.package_id.toString()}
+                        >
                           <Box sx={{ width: "100%" }}>
-                            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
                               <Typography variant="body1">
                                 {pkg.package_name}
                               </Typography>
@@ -475,8 +471,12 @@ export default function Booking() {
                                 color="primary"
                               />
                             </Box>
-                            <Typography variant="caption" color="text.secondary">
-                              {pkg.description} • {pkg.duration_minutes} min • {pkg.category_name}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {pkg.description} • {pkg.duration_minutes} min •{" "}
+                              {pkg.category_name}
                             </Typography>
                           </Box>
                         </MenuItem>
@@ -487,7 +487,7 @@ export default function Booking() {
 
                 {renderCommonFields()}
 
-                <Grid item xs={12}>
+                <Grid size={12}>
                   <Button
                     type="submit"
                     variant="contained"
@@ -500,7 +500,11 @@ export default function Booking() {
                       !serviceAddress
                     }
                   >
-                    {loading ? <CircularProgress size={24} /> : "Book with Provider"}
+                    {loading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      "Book with Provider"
+                    )}
                   </Button>
                 </Grid>
               </Grid>
@@ -511,12 +515,11 @@ export default function Booking() {
 
       <Box sx={{ mt: 3 }}>
         <Typography variant="body2" color="text.secondary">
-          <strong>Note:</strong> All bookings are subject to provider availability and
-          COVID-19 safety checks. You'll receive a confirmation email once your booking is
-          confirmed.
+          <strong>Note:</strong> All bookings are subject to provider
+          availability and COVID-19 safety checks. You'll receive a confirmation
+          email once your booking is confirmed.
         </Typography>
       </Box>
     </Box>
   );
 }
-

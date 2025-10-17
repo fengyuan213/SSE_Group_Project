@@ -10,8 +10,7 @@ import {
   Chip,
 } from "@mui/material";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
-import BookingGeneral from "./pages/BookingGeneral.tsx";
-import BookingSpecific from "./pages/BookingSpecific.tsx";
+import Booking from "./pages/Booking.tsx";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -37,9 +36,6 @@ export default function App() {
           </Button>
           <Button color="inherit" component={Link} to="/booking/general">
             General Booking
-          </Button>
-          <Button color="inherit" component={Link} to="/booking/specific">
-            Provider Booking
           </Button>
           <Box sx={{ ml: 2 }}>
             <Chip
@@ -73,8 +69,7 @@ export default function App() {
               </Box>
             }
           />
-          <Route path="/booking/general" element={<BookingGeneral />} />
-          <Route path="/booking/specific" element={<BookingSpecific />} />
+          <Route path="/booking/general" element={<Booking />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Container>

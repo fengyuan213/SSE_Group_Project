@@ -18,9 +18,10 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
-
     /* JSX */
     "jsx": "react-jsx"
   },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+
   "exclude": ["node_modules"]
 }
