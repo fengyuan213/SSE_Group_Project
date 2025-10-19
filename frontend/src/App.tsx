@@ -11,6 +11,7 @@ import {
 } from "@mui/material";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import Booking from "./pages/Booking.tsx";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -55,23 +56,25 @@ export default function App() {
       </AppBar>
       <Toolbar />
       <Container sx={{ py: 3 }}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <Box>
-                <Typography variant="h4" gutterBottom>
-                  Welcome to the Home Services Booking System
-                </Typography>
-                <Typography color="text.secondary">
-                  Use the menu above to navigate to the booking forms.
-                </Typography>
-              </Box>
-            }
-          />
-          <Route path="/booking/general" element={<Booking />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <Box>
+                  <Typography variant="h4" gutterBottom>
+                    Welcome to the Home Services Booking System
+                  </Typography>
+                  <Typography color="text.secondary">
+                    Use the menu above to navigate to the booking forms.
+                  </Typography>
+                </Box>
+              }
+            />
+            <Route path="/booking/general" element={<Booking />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </ErrorBoundary>
       </Container>
     </BrowserRouter>
   );

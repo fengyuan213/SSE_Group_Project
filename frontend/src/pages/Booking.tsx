@@ -138,6 +138,7 @@ export default function Booking() {
     setScheduledDate(dayjs().add(1, "day"));
     setServiceAddress("");
     setSpecialInstructions("");
+    setFilteredProviders(providers); // Reset filtered providers to show all
   };
 
   const handleGeneralBooking = async (e: React.FormEvent) => {
@@ -151,6 +152,13 @@ export default function Booking() {
         (pkg) => pkg.package_id.toString() === selectedPackage
       );
 
+      if (!selectedPkg) {
+        throw new Error("Selected package not found");
+      }
+
+      // Capture the package name before resetting form
+      const packageName = selectedPkg.package_name;
+
       const bookingData = {
         package_id: Number(selectedPackage),
         booking_type: "non-urgent",
@@ -161,10 +169,13 @@ export default function Booking() {
 
       const response = await bookingApi.createBooking(bookingData);
 
-      setSuccess(
-        `Booking created successfully! Reference: ${response.booking_reference}. We'll match you with a provider for ${selectedPkg?.package_name}.`
-      );
+      // Reset form first to clear state
       resetForm();
+
+      // Then set success message with captured values
+      setSuccess(
+        `Booking created successfully! Reference: ${response.booking_reference}. We'll match you with a provider for ${packageName}.`
+      );
     } catch (err) {
       console.error("Error creating booking:", err);
       setError("Failed to create booking. Please try again.");
@@ -187,6 +198,18 @@ export default function Booking() {
         (pkg) => pkg.package_id.toString() === selectedPackage
       );
 
+      if (!selectedProv) {
+        throw new Error("Selected provider not found");
+      }
+
+      if (!selectedPkg) {
+        throw new Error("Selected package not found");
+      }
+
+      // Capture values before resetting form
+      const providerName = selectedProv.business_name;
+      const packageName = selectedPkg.package_name;
+
       const bookingData = {
         package_id: Number(selectedPackage),
         provider_id: Number(selectedProvider),
@@ -198,10 +221,13 @@ export default function Booking() {
 
       const response = await bookingApi.createBooking(bookingData);
 
-      setSuccess(
-        `Booking created successfully! Reference: ${response.booking_reference}. Booked with ${selectedProv?.business_name} for ${selectedPkg?.package_name}!`
-      );
+      // Reset form first to clear state
       resetForm();
+
+      // Then set success message with captured values
+      setSuccess(
+        `Booking created successfully! Reference: ${response.booking_reference}. Booked with ${providerName} for ${packageName}!`
+      );
     } catch (err) {
       console.error("Error creating booking:", err);
       setError("Failed to create booking. Please try again.");
