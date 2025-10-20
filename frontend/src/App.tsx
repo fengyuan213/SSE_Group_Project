@@ -27,15 +27,32 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppBar position="fixed" sx={{ backgroundColor: 'white', color: 'text.primary' }} elevation={1}>
+      <AppBar
+        position="fixed"
+        sx={{ backgroundColor: "white", color: "text.primary" }}
+        elevation={1}
+      >
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 'bold', color: 'primary.main' }}>
+          <Typography
+            variant="h6"
+            sx={{ flexGrow: 1, fontWeight: "bold", color: "primary.main" }}
+          >
             🏠 HomeService Hub
           </Typography>
-          <Button color="inherit" component={Link} to="/" sx={{ color: 'text.primary' }}>
+          <Button
+            color="inherit"
+            component={Link}
+            to="/"
+            sx={{ color: "text.primary" }}
+          >
             Home
           </Button>
-          <Button color="inherit" component={Link} to="/booking/general" sx={{ color: 'text.primary' }}>
+          <Button
+            color="inherit"
+            component={Link}
+            to="/booking/general"
+            sx={{ color: "text.primary" }}
+          >
             Book Service
           </Button>
           <Box sx={{ ml: 2 }}>
@@ -55,11 +72,13 @@ export default function App() {
         </Toolbar>
       </AppBar>
       <Toolbar />
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/booking/general" element={<Booking />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/booking/general" element={<Booking />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Container>
     </BrowserRouter>
   );
 }

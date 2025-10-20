@@ -52,7 +52,7 @@ function TabPanel(props: TabPanelProps) {
 
 export default function Booking() {
   const [searchParams] = useSearchParams();
-  const preSelectedPackage = searchParams.get('package');
+  const preSelectedPackage = searchParams.get("package");
 
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -68,13 +68,23 @@ export default function Booking() {
   );
 
   // Form data
-  const [selectedPackage, setSelectedPackage] = useState<string>(preSelectedPackage || "");
+  const [selectedPackage, setSelectedPackage] = useState<string>(
+    preSelectedPackage || ""
+  );
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [scheduledDate, setScheduledDate] = useState<Dayjs | null>(
     dayjs().add(1, "day")
   );
   const [serviceAddress, setServiceAddress] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+
+  // Sync selectedPackage with URL parameter changes
+  useEffect(() => {
+    const urlPackage = searchParams.get("package");
+    if (urlPackage && urlPackage !== selectedPackage) {
+      setSelectedPackage(urlPackage);
+    }
+  }, [searchParams]);
 
   // Fetch data functions using centralized API
   const fetchPackages = useCallback(async () => {

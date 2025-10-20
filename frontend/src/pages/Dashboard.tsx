@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -17,11 +16,8 @@ import {
   IconButton,
   Stack,
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import {
-  Star,
-  AccessTime,
-  AttachMoney,
-  LocationOn,
   Verified,
   PlayArrow,
   ThumbUp,
@@ -65,7 +61,7 @@ const getServiceImage = (categoryName: string, packageId: number): string => {
       "https://images.unsplash.com/photo-1558904541-efa843a96f01?w=320&h=180&fit=crop",
     ],
   };
-  
+
   const images = imageMap[categoryName] || imageMap["General Maintenance"];
   return images[packageId % images.length];
 };
@@ -77,7 +73,12 @@ const getMockProvider = (packageId: number) => {
     { name: "FixItFast", rating: 4.6, verified: true, subscribers: "8.5K" },
     { name: "HomeExperts", rating: 4.9, verified: true, subscribers: "20K" },
     { name: "QuickFix", rating: 4.7, verified: false, subscribers: "5.2K" },
-    { name: "ReliableService", rating: 4.5, verified: true, subscribers: "15K" },
+    {
+      name: "ReliableService",
+      rating: 4.5,
+      verified: true,
+      subscribers: "15K",
+    },
   ];
   return providers[packageId % providers.length];
 };
@@ -92,25 +93,25 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
   const imageUrl = getServiceImage(service.category_name, service.package_id);
 
   return (
-    <Card 
-      sx={{ 
-        maxWidth: 320, 
+    <Card
+      sx={{
+        maxWidth: 320,
         borderRadius: 2,
-        transition: 'transform 0.2s, box-shadow 0.2s',
-        '&:hover': {
-          transform: 'translateY(-4px)',
+        transition: "transform 0.2s, box-shadow 0.2s",
+        "&:hover": {
+          transform: "translateY(-4px)",
           boxShadow: 4,
-        }
+        },
       }}
     >
-      <Box sx={{ position: 'relative' }}>
+      <Box sx={{ position: "relative" }}>
         <CardMedia
-          sx={{ 
+          sx={{
             height: 180,
-            position: 'relative',
-            '&:hover .play-overlay': {
+            position: "relative",
+            "&:hover .play-overlay": {
               opacity: 1,
-            }
+            },
           }}
           image={imageUrl}
           title={service.package_name}
@@ -118,18 +119,18 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
         <Box
           className="play-overlay"
           sx={{
-            position: 'absolute',
+            position: "absolute",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.6)",
             opacity: 0,
-            transition: 'opacity 0.3s',
-            cursor: 'pointer',
+            transition: "opacity 0.3s",
+            cursor: "pointer",
           }}
           onClick={() => onBookNow(service)}
         >
@@ -137,7 +138,7 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
             sx={{
               width: 64,
               height: 64,
-              backgroundColor: 'primary.main',
+              backgroundColor: "primary.main",
             }}
           >
             <PlayArrow sx={{ fontSize: 32 }} />
@@ -147,32 +148,32 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
           label={`${service.duration_minutes} min`}
           size="small"
           sx={{
-            position: 'absolute',
+            position: "absolute",
             bottom: 8,
             right: 8,
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            color: 'white',
+            backgroundColor: "rgba(0,0,0,0.8)",
+            color: "white",
           }}
         />
       </Box>
-      
+
       <CardContent sx={{ pb: 1 }}>
-        <Typography 
-          variant="body1" 
+        <Typography
+          variant="body1"
           fontWeight="bold"
-          sx={{ 
+          sx={{
             mb: 1,
-            display: '-webkit-box',
+            display: "-webkit-box",
             WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
             lineHeight: 1.3,
           }}
         >
           {service.package_name}
         </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+
+        <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
           <Avatar sx={{ width: 24, height: 24, mr: 1 }}>
             {provider.name[0]}
           </Avatar>
@@ -180,17 +181,28 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
             {provider.name}
           </Typography>
           {provider.verified && (
-            <Verified sx={{ fontSize: 16, color: 'grey.600' }} />
+            <Verified sx={{ fontSize: 16, color: "grey.600" }} />
           )}
         </Box>
-        
+
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {provider.subscribers} customers • {service.category_name}
         </Typography>
-        
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <Rating value={provider.rating} precision={0.1} size="small" readOnly />
+
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <Rating
+              value={provider.rating}
+              precision={0.1}
+              size="small"
+              readOnly
+            />
             <Typography variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
               ({provider.rating})
             </Typography>
@@ -199,24 +211,24 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
             ${service.base_price}
           </Typography>
         </Box>
-        
-        <Typography 
-          variant="body2" 
-          color="text.secondary" 
-          sx={{ 
+
+        <Typography
+          variant="body2"
+          color="text.secondary"
+          sx={{
             mt: 1,
-            display: '-webkit-box',
+            display: "-webkit-box",
             WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
+            WebkitBoxOrient: "vertical",
+            overflow: "hidden",
           }}
         >
           {service.description}
         </Typography>
       </CardContent>
-      
+
       <CardActions sx={{ pt: 0, px: 2, pb: 2 }}>
-        <Stack direction="row" spacing={1} sx={{ width: '100%' }}>
+        <Stack direction="row" spacing={1} sx={{ width: "100%" }}>
           <IconButton size="small">
             <ThumbUp fontSize="small" />
           </IconButton>
@@ -226,10 +238,10 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
           <IconButton size="small">
             <BookmarkBorder fontSize="small" />
           </IconButton>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             size="small"
-            sx={{ ml: 'auto !important' }}
+            sx={{ ml: "auto !important" }}
             onClick={() => onBookNow(service)}
           >
             Book Now
@@ -272,9 +284,12 @@ export default function Dashboard() {
     fetchServices();
   }, []);
 
-  const filteredServices = selectedCategory === "All" 
-    ? services 
-    : services.filter(service => service.category_name === selectedCategory);
+  const filteredServices =
+    selectedCategory === "All"
+      ? services
+      : services.filter(
+          (service) => service.category_name === selectedCategory
+        );
 
   const handleBookNow = (service: ServicePackage) => {
     // Navigate to booking page with pre-selected service
@@ -298,7 +313,7 @@ export default function Dashboard() {
       </Box>
 
       {/* Category tabs similar to YouTube channel tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 3 }}>
         <Tabs
           value={selectedCategory}
           onChange={handleCategoryChange}
@@ -311,7 +326,7 @@ export default function Dashboard() {
               key={category.id}
               label={category.name}
               value={category.name}
-              sx={{ textTransform: 'none', fontWeight: 500 }}
+              sx={{ textTransform: "none", fontWeight: 500 }}
             />
           ))}
         </Tabs>
@@ -319,13 +334,16 @@ export default function Dashboard() {
 
       {/* Services grid similar to YouTube video grid */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
           <Typography>Loading services...</Typography>
         </Box>
       ) : (
         <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ pb: 4 }}>
           {filteredServices.map((service) => (
-            <Grid key={service.package_id} xs={12} sm={6} md={4} lg={3}>
+            <Grid
+              key={service.package_id}
+              size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+            >
               <ServiceCard service={service} onBookNow={handleBookNow} />
             </Grid>
           ))}
@@ -333,7 +351,7 @@ export default function Dashboard() {
       )}
 
       {filteredServices.length === 0 && !loading && (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
+        <Box sx={{ textAlign: "center", py: 8 }}>
           <Typography variant="h6" color="text.secondary">
             No services found in this category
           </Typography>
