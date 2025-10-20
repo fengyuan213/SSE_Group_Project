@@ -22,6 +22,7 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import { useSearchParams } from "react-router-dom";
 import {
   bookingApi,
   type ServicePackage,
@@ -50,6 +51,9 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function Booking() {
+  const [searchParams] = useSearchParams();
+  const preSelectedPackage = searchParams.get('package');
+
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -64,7 +68,7 @@ export default function Booking() {
   );
 
   // Form data
-  const [selectedPackage, setSelectedPackage] = useState<string>("");
+  const [selectedPackage, setSelectedPackage] = useState<string>(preSelectedPackage || "");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [scheduledDate, setScheduledDate] = useState<Dayjs | null>(
     dayjs().add(1, "day")

@@ -389,6 +389,70 @@ INSERT INTO data_retention_policies (data_type, retention_period) VALUES
 ('personal_data', '2 years'),
 ('bookings', '1 year'),
 ('audit_logs', '180 days');
+
+-- ============================================================================
+-- SAMPLE DATA FOR DEVELOPMENT AND DEMO
+-- ============================================================================
+
+-- Insert roles
+INSERT INTO roles (role_name, description) VALUES
+('admin', 'System administrator with full access'),
+('provider', 'Service provider who can offer services'),
+('customer', 'Regular customer who books services');
+
+-- Insert service categories
+INSERT INTO service_categories (category_name, description, icon_url) VALUES
+('Plumbing', 'Water, pipes, fixtures, and drainage services', 'https://img.icons8.com/ios-filled/50/000000/plumbing.png'),
+('Electrical', 'Electrical wiring, outlets, and safety services', 'https://img.icons8.com/ios-filled/50/000000/electrical.png'),
+('HVAC', 'Heating, ventilation, and air conditioning services', 'https://img.icons8.com/ios-filled/50/000000/air-conditioner.png'),
+('General Maintenance', 'General repairs and home maintenance', 'https://img.icons8.com/ios-filled/50/000000/maintenance.png'),
+('Cleaning', 'Professional cleaning and sanitization services', 'https://img.icons8.com/ios-filled/50/000000/cleaning.png'),
+('Landscaping', 'Garden, lawn, and outdoor maintenance services', 'https://img.icons8.com/ios-filled/50/000000/landscaping.png');
+
+-- Insert sample service packages
+INSERT INTO service_packages (category_id, package_name, description, base_price, duration_minutes, requires_inspection) VALUES
+-- Plumbing Services
+(1, 'Basic Plumbing Inspection', 'Comprehensive plumbing inspection including pipes, fixtures, and water pressure testing', 150.00, 60, TRUE),
+(1, 'Emergency Leak Repair', 'Urgent leak repair service available 24/7 for burst pipes and major leaks', 300.00, 120, FALSE),
+(1, 'Drain Cleaning & Unclogging', 'Professional drain cleaning service for kitchen, bathroom, and main drains', 120.00, 90, FALSE),
+(1, 'Water Heater Installation', 'Complete water heater replacement and installation with warranty', 850.00, 240, FALSE),
+
+-- Electrical Services
+(2, 'Electrical Safety Check', 'Full electrical safety inspection including outlets, wiring, and panel check', 200.00, 90, TRUE),
+(2, 'Smart Home Installation', 'Smart switch, outlet, and thermostat installation with configuration', 350.00, 180, FALSE),
+(2, 'Ceiling Fan Installation', 'Professional ceiling fan installation with light fixture integration', 180.00, 120, FALSE),
+(2, 'Panel Upgrade Service', 'Electrical panel upgrade to modern standards with increased capacity', 1200.00, 480, TRUE),
+
+-- HVAC Services
+(3, 'AC Maintenance', 'Air conditioning service and maintenance including filter replacement', 180.00, 90, FALSE),
+(3, 'Heating System Tune-up', 'Full service for heating units including efficiency optimization', 260.00, 120, FALSE),
+(3, 'Duct Cleaning Service', 'Professional air duct cleaning and sanitization for better air quality', 380.00, 180, FALSE),
+(3, 'HVAC System Installation', 'Complete HVAC system installation with energy efficiency consultation', 4500.00, 720, TRUE),
+
+-- General Maintenance
+(4, 'Full Home Maintenance', 'Complete home check-up and repair including minor fixes and safety inspection', 500.00, 240, TRUE),
+(4, 'Handyman Service Package', 'General repairs, furniture assembly, and small home improvement tasks', 150.00, 120, FALSE),
+(4, 'Paint Touch-up Service', 'Interior and exterior paint touch-ups and minor wall repairs', 220.00, 180, FALSE),
+
+-- Cleaning Services
+(5, 'Deep House Cleaning', 'Comprehensive deep cleaning service for entire home including sanitization', 280.00, 240, FALSE),
+(5, 'Carpet & Upholstery Cleaning', 'Professional steam cleaning for carpets, rugs, and furniture upholstery', 180.00, 150, FALSE),
+(5, 'Post-Construction Cleanup', 'Specialized cleaning service after renovation or construction work', 450.00, 300, FALSE),
+(5, 'Window Cleaning Service', 'Interior and exterior window cleaning with screen cleaning included', 120.00, 90, FALSE),
+
+-- Landscaping Services
+(6, 'Lawn Care & Maintenance', 'Regular lawn mowing, edging, and basic landscaping maintenance', 80.00, 60, FALSE),
+(6, 'Garden Design & Installation', 'Custom garden design with plant selection and professional installation', 650.00, 480, TRUE),
+(6, 'Tree Trimming & Removal', 'Professional tree service including pruning, trimming, and safe removal', 320.00, 180, FALSE),
+(6, 'Sprinkler System Installation', 'Automated irrigation system design and installation with smart controls', 890.00, 360, TRUE),
+(6, 'Seasonal Yard Cleanup', 'Comprehensive seasonal cleanup including leaf removal and debris clearing', 150.00, 120, FALSE);
+
+-- Insert sample vouchers
+INSERT INTO vouchers (voucher_code, description, discount_type, discount_value, min_purchase_amount, max_discount_amount, valid_from, valid_until, usage_limit) VALUES
+('WELCOME20', 'Welcome discount for new customers', 'percentage', 20.00, 100.00, 50.00, NOW(), NOW() + INTERVAL '30 days', 100),
+('SPRING25', 'Spring cleaning special offer', 'percentage', 25.00, 200.00, 75.00, NOW(), NOW() + INTERVAL '60 days', 50),
+('EMERGENCY10', 'Emergency service discount', 'fixed_amount', 50.00, 250.00, 50.00, NOW(), NOW() + INTERVAL '90 days', 200),
+('BULK50', 'Bulk service package discount', 'fixed_amount', 100.00, 500.00, 100.00, NOW(), NOW() + INTERVAL '45 days', 25);
 CREATE OR REPLACE FUNCTION cleanup_expired_data()
 RETURNS void AS $$
 DECLARE
@@ -397,16 +461,16 @@ DECLARE
     audit_retention INTERVAL;
 BEGIN
     -- Fetch retention intervals
-    SELECT retention_period INTO personal_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO personal_retention
+    FROM data_retention_policies
     WHERE data_type = 'personal_data' AND auto_delete_enabled = TRUE;
 
-    SELECT retention_period INTO booking_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO booking_retention
+    FROM data_retention_policies
     WHERE data_type = 'bookings' AND auto_delete_enabled = TRUE;
 
-    SELECT retention_period INTO audit_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO audit_retention
+    FROM data_retention_policies
     WHERE data_type = 'audit_logs' AND auto_delete_enabled = TRUE;
 
     -- === Delete old users
@@ -443,7 +507,7 @@ $$ LANGUAGE plpgsql;
 
 -- View: Active bookings with user and provider details
 CREATE OR REPLACE VIEW active_bookings_view AS
-SELECT 
+SELECT
     b.booking_id,
     b.booking_reference,
     b.booking_status,
@@ -462,7 +526,7 @@ JOIN service_packages pkg ON b.package_id = pkg.package_id
 WHERE b.booking_status NOT IN ('completed', 'cancelled');
 -- View: Provider performance metrics
 CREATE OR REPLACE VIEW provider_performance_view AS
-SELECT 
+SELECT
     sp.provider_id,
     sp.business_name,
     sp.average_rating,
@@ -520,9 +584,9 @@ SELECT id, 1 FROM users WHERE email = 'admin@example.com';
 
 INSERT INTO user_roles (user_id, role_id)
 SELECT id, 3 FROM users WHERE email IN (
-  'john.doe@example.com', 
-  'jane.smith@example.com', 
-  'michael.lee@example.com', 
+  'john.doe@example.com',
+  'jane.smith@example.com',
+  'michael.lee@example.com',
   'sara.connor@example.com'
 );
 
