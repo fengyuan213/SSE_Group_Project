@@ -15,6 +15,7 @@ import Payment from "./pages/Payment.tsx";
 import Confirmation from "./pages/Confirmation.tsx";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ROUTES } from "./lib/routes";
+import Dashboard from "./pages/Dashboard.tsx";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -30,10 +31,17 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <AppBar position="fixed" color="primary">
+      <AppBar
+        position="fixed"
+        sx={{ backgroundColor: "white", color: "text.primary" }}
+        elevation={1}
+      >
         <Toolbar>
-          <Typography variant="h6" sx={{ flexGrow: 1 }}>
-            Home Services Booking
+          <Typography
+            variant="h6"
+            sx={{ flexGrow: 1, fontWeight: "bold", color: "primary.main" }}
+          >
+            🏠 HomeService Hub
           </Typography>
           <Button color="inherit" component={Link} to={ROUTES.HOME}>
             Home
@@ -61,19 +69,7 @@ export default function App() {
       <Container sx={{ py: 3 }}>
         <ErrorBoundary>
           <Routes>
-            <Route
-              path={ROUTES.HOME}
-              element={
-                <Box>
-                  <Typography variant="h4" gutterBottom>
-                    Welcome to the Home Services Booking System
-                  </Typography>
-                  <Typography color="text.secondary">
-                    Use the menu above to navigate to the booking forms.
-                  </Typography>
-                </Box>
-              }
-            />
+            <Route path={ROUTES.HOME} element={<Dashboard />} />
             <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
             <Route path={ROUTES.PAYMENT} element={<Payment />} />
             <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />

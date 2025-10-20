@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { buildPaymentRoute } from "../lib/routes";
 import {
   Box,
@@ -8,18 +8,18 @@ import {
   TextField,
   Button,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Tabs,
-  Tab,
+  Stepper,
+  Step,
+  StepLabel,
   Alert,
   CircularProgress,
   Chip,
+  Paper,
+  Divider,
+  Stack,
+  Autocomplete,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
-import type { SelectChangeEvent } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -30,33 +30,22 @@ import {
   type ServicePackage,
   type ServiceProvider,
 } from "../lib/api";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`booking-tabpanel-${index}`}
-      aria-labelledby={`booking-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-    </div>
-  );
-}
+const steps = ["Select Service", "Choose Date & Time", "Enter Details"];
 
 export default function Booking() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const preSelectedPackage = searchParams.get("package");
+
+  // Stepper
+  const [activeStep, setActiveStep] = useState(0);
 
   // UI State
-  const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +54,12 @@ export default function Booking() {
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
 
-  // Form State
-  const [selectedPackage, setSelectedPackage] = useState<string>("");
-  const [selectedProvider, setSelectedProvider] = useState<string>("");
+  // Form Data
+  const [selectedPackage, setSelectedPackage] = useState<ServicePackage | null>(
+    null
+  );
+  const [selectedProvider, setSelectedProvider] =
+    useState<ServiceProvider | null>(null);
   const [scheduledDate, setScheduledDate] = useState<Dayjs | null>(
     dayjs().add(1, "day")
   );
@@ -88,6 +80,16 @@ export default function Booking() {
         ]);
         setPackages(packagesData);
         setProviders(providersData);
+
+        // Pre-select package if specified in URL
+        if (preSelectedPackage) {
+          const pkg = packagesData.find(
+            (p) => p.package_id.toString() === preSelectedPackage
+          );
+          if (pkg) {
+            setSelectedPackage(pkg);
+          }
+        }
       } catch (err) {
         console.error("Error loading data:", err);
         setError("Failed to load data. Please refresh the page.");
@@ -96,43 +98,29 @@ export default function Booking() {
       }
     };
     loadData();
-  }, []);
+  }, [preSelectedPackage]);
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue);
+  const handleNext = () => {
     setError(null);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setSelectedPackage("");
-    setSelectedProvider("");
-    setScheduledDate(dayjs().add(1, "day"));
-    setServiceAddress("");
-    setSpecialInstructions("");
-    setSelectedStartTime(null);
-  };
-
-  const handlePackageChange = (event: SelectChangeEvent<string>) => {
-    setSelectedPackage(event.target.value);
-    setSelectedStartTime(null); // Reset time when package changes
-  };
-
-  const handleProviderChange = (event: SelectChangeEvent<string>) => {
-    setSelectedProvider(event.target.value);
-    setSelectedStartTime(null); // Reset time when provider changes
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!selectedStartTime) {
+    if (activeStep === 0 && !selectedPackage) {
+      setError("Please select a service package");
+      return;
+    }
+    if (activeStep === 1 && !selectedStartTime) {
       setError("Please select a time slot");
       return;
     }
+    setActiveStep((prev) => prev + 1);
+  };
 
-    if (!scheduledDate || !scheduledDate.isValid()) {
-      setError("Please select a valid date");
+  const handleBack = () => {
+    setError(null);
+    setActiveStep((prev) => prev - 1);
+  };
+
+  const handleSubmit = async () => {
+    if (!serviceAddress.trim()) {
+      setError("Please enter a service address");
       return;
     }
 
@@ -141,12 +129,11 @@ export default function Booking() {
 
     try {
       const bookingData = {
-        package_id: Number(selectedPackage),
-        ...(tabValue === 1 &&
-          selectedProvider && { provider_id: Number(selectedProvider) }),
+        package_id: selectedPackage!.package_id,
+        ...(selectedProvider && { provider_id: selectedProvider.provider_id }),
         booking_type: "non-urgent",
-        start_date: scheduledDate.format("YYYY-MM-DD"),
-        start_time: selectedStartTime,
+        start_date: scheduledDate!.format("YYYY-MM-DD"),
+        start_time: selectedStartTime!,
         service_address: serviceAddress,
         special_instructions: specialInstructions || null,
       };
@@ -169,409 +156,457 @@ export default function Booking() {
     return `${mins} min`;
   };
 
-  const selectedPackageData = packages.find(
-    (pkg) => pkg.package_id.toString() === selectedPackage
-  );
-
   if (initialLoading) {
     return (
       <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
-        minHeight="400px"
+        minHeight="60vh"
       >
-        <CircularProgress />
+        <CircularProgress size={60} />
       </Box>
     );
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
-        Book a Home Service
-      </Typography>
-      <Typography color="text.secondary" paragraph>
-        Choose between booking a general service or selecting a specific service
-        provider
-      </Typography>
+    <Box sx={{ maxWidth: 1200, mx: "auto" }}>
+      {/* Header */}
+      <Box sx={{ mb: 4, textAlign: "center" }}>
+        <Typography variant="h3" gutterBottom fontWeight="bold">
+          Book Your Home Service
+        </Typography>
+        <Typography variant="h6" color="text.secondary">
+          Fast, reliable, and professional services at your doorstep
+        </Typography>
+      </Box>
 
-      <Card>
-        <CardContent>
-          <Tabs
-            value={tabValue}
-            onChange={handleTabChange}
-            aria-label="booking tabs"
-            sx={{ borderBottom: 1, borderColor: "divider" }}
-          >
-            <Tab label="General Service Booking" />
-            <Tab label="Book by Provider" />
-          </Tabs>
-
-          {error && (
-            <Alert
-              severity="error"
-              sx={{ mt: 2 }}
-              onClose={() => setError(null)}
-            >
-              {error}
-            </Alert>
-          )}
-
-          {/* General Service Booking Tab */}
-          <TabPanel value={tabValue} index={0}>
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid size={12}>
-                  <Alert severity="info">
-                    Select a service package and we'll match you with an
-                    available provider in your area.
-                  </Alert>
-                </Grid>
-
-                <Grid size={12}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Service Package</InputLabel>
-                    <Select
-                      value={selectedPackage}
-                      onChange={handlePackageChange}
-                      label="Service Package"
-                    >
-                      {packages.map((pkg) => (
-                        <MenuItem
-                          key={pkg.package_id}
-                          value={pkg.package_id.toString()}
-                        >
-                          <Box sx={{ width: "100%" }}>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <Typography variant="body1">
-                                {pkg.package_name}
-                              </Typography>
-                              <Chip
-                                label={`$${pkg.base_price} AUD`}
-                                size="small"
-                                color="primary"
-                              />
-                            </Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {pkg.description} • {pkg.duration_minutes} min •{" "}
-                              {pkg.category_name}
-                            </Typography>
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {selectedPackageData && (
-                  <Grid size={12}>
-                    <Alert severity="info" icon={<Typography>⏱️</Typography>}>
-                      <Typography variant="body2">
-                        <strong>Service duration:</strong>{" "}
-                        {formatDuration(selectedPackageData.duration_minutes)}
-                        {selectedPackageData.duration_minutes > 480 &&
-                          " - May span multiple days"}
-                      </Typography>
-                    </Alert>
-                  </Grid>
-                )}
-
-                <Grid size={12}>
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      label="Service Date"
-                      value={scheduledDate}
-                      onChange={(newValue) => {
-                        setScheduledDate(newValue);
-                        setSelectedStartTime(null);
-                      }}
-                      minDate={dayjs()}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          required: true,
-                        },
-                      }}
-                    />
-                  </LocalizationProvider>
-                </Grid>
-
-                {selectedPackage &&
-                  scheduledDate &&
-                  scheduledDate.isValid() && (
-                    <Grid size={12}>
-                      <TimeSlotPicker
-                        packageId={Number(selectedPackage)}
-                        date={scheduledDate.toDate()}
-                        onSlotSelect={(time) => setSelectedStartTime(time)}
-                      />
-                    </Grid>
-                  )}
-
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Service Address"
-                    value={serviceAddress}
-                    onChange={(e) => setServiceAddress(e.target.value)}
-                    required
-                    multiline
-                    rows={2}
-                    placeholder="Enter the address where service is needed"
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Special Instructions (Optional)"
-                    value={specialInstructions}
-                    onChange={(e) => setSpecialInstructions(e.target.value)}
-                    multiline
-                    rows={3}
-                    placeholder="Any specific requirements or notes for the service provider"
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    disabled={
-                      loading ||
-                      !selectedPackage ||
-                      !serviceAddress ||
-                      !selectedStartTime
-                    }
-                  >
-                    {loading ? <CircularProgress size={24} /> : "Book Service"}
-                  </Button>
-                </Grid>
-              </Grid>
-            </form>
-          </TabPanel>
-
-          {/* Book by Provider Tab */}
-          <TabPanel value={tabValue} index={1}>
-            <form onSubmit={handleSubmit}>
-              <Grid container spacing={3}>
-                <Grid size={12}>
-                  <Alert severity="info">
-                    Choose a specific service provider and the service you need.
-                  </Alert>
-                </Grid>
-
-                <Grid size={12}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Service Provider</InputLabel>
-                    <Select
-                      value={selectedProvider}
-                      onChange={handleProviderChange}
-                      label="Service Provider"
-                    >
-                      {providers.map((provider) => (
-                        <MenuItem
-                          key={provider.provider_id}
-                          value={provider.provider_id.toString()}
-                        >
-                          <Box sx={{ width: "100%" }}>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 1,
-                              }}
-                            >
-                              <Typography variant="body1">
-                                {provider.business_name}
-                              </Typography>
-                              {provider.is_verified && (
-                                <Chip
-                                  label="Verified"
-                                  size="small"
-                                  color="success"
-                                  variant="outlined"
-                                />
-                              )}
-                              <Chip
-                                label={`⭐ ${provider.average_rating}`}
-                                size="small"
-                              />
-                            </Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {provider.description} • {provider.address}
-                            </Typography>
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                <Grid size={12}>
-                  <FormControl fullWidth required>
-                    <InputLabel>Service Package</InputLabel>
-                    <Select
-                      value={selectedPackage}
-                      onChange={handlePackageChange}
-                      label="Service Package"
-                    >
-                      {packages.map((pkg) => (
-                        <MenuItem
-                          key={pkg.package_id}
-                          value={pkg.package_id.toString()}
-                        >
-                          <Box sx={{ width: "100%" }}>
-                            <Box
-                              sx={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <Typography variant="body1">
-                                {pkg.package_name}
-                              </Typography>
-                              <Chip
-                                label={`$${pkg.base_price} AUD`}
-                                size="small"
-                                color="primary"
-                              />
-                            </Box>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {pkg.description} • {pkg.duration_minutes} min •{" "}
-                              {pkg.category_name}
-                            </Typography>
-                          </Box>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Grid>
-
-                {selectedPackageData && (
-                  <Grid size={12}>
-                    <Alert severity="info" icon={<Typography>⏱️</Typography>}>
-                      <Typography variant="body2">
-                        <strong>Service duration:</strong>{" "}
-                        {formatDuration(selectedPackageData.duration_minutes)}
-                        {selectedPackageData.duration_minutes > 480 &&
-                          " - May span multiple days"}
-                      </Typography>
-                    </Alert>
-                  </Grid>
-                )}
-
-                <Grid size={12}>
-                  <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <DatePicker
-                      label="Service Date"
-                      value={scheduledDate}
-                      onChange={(newValue) => {
-                        setScheduledDate(newValue);
-                        setSelectedStartTime(null);
-                      }}
-                      minDate={dayjs()}
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          required: true,
-                        },
-                      }}
-                    />
-                  </LocalizationProvider>
-                </Grid>
-
-                {selectedPackage &&
-                  scheduledDate &&
-                  scheduledDate.isValid() && (
-                    <Grid size={12}>
-                      <TimeSlotPicker
-                        packageId={Number(selectedPackage)}
-                        date={scheduledDate.toDate()}
-                        providerId={
-                          selectedProvider
-                            ? Number(selectedProvider)
-                            : undefined
-                        }
-                        onSlotSelect={(time) => setSelectedStartTime(time)}
-                      />
-                    </Grid>
-                  )}
-
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Service Address"
-                    value={serviceAddress}
-                    onChange={(e) => setServiceAddress(e.target.value)}
-                    required
-                    multiline
-                    rows={2}
-                    placeholder="Enter the address where service is needed"
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <TextField
-                    fullWidth
-                    label="Special Instructions (Optional)"
-                    value={specialInstructions}
-                    onChange={(e) => setSpecialInstructions(e.target.value)}
-                    multiline
-                    rows={3}
-                    placeholder="Any specific requirements or notes for the service provider"
-                  />
-                </Grid>
-
-                <Grid size={12}>
-                  <Button
-                    type="submit"
-                    variant="contained"
-                    size="large"
-                    fullWidth
-                    disabled={
-                      loading ||
-                      !selectedPackage ||
-                      !selectedProvider ||
-                      !serviceAddress ||
-                      !selectedStartTime
-                    }
-                  >
-                    {loading ? (
-                      <CircularProgress size={24} />
-                    ) : (
-                      "Book with Provider"
-                    )}
-                  </Button>
-                </Grid>
-              </Grid>
-            </form>
-          </TabPanel>
+      {/* Stepper */}
+      <Card sx={{ mb: 4, overflow: "visible" }}>
+        <CardContent sx={{ pt: 4, pb: 4 }}>
+          <Stepper activeStep={activeStep} alternativeLabel>
+            {steps.map((label) => (
+              <Step key={label}>
+                <StepLabel>{label}</StepLabel>
+              </Step>
+            ))}
+          </Stepper>
         </CardContent>
       </Card>
 
-      <Box sx={{ mt: 3 }}>
+      {/* Error Display */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Step Content */}
+      <Card>
+        <CardContent sx={{ p: 4 }}>
+          {/* Step 1: Select Service */}
+          {activeStep === 0 && (
+            <Box>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Choose Your Service
+              </Typography>
+              <Typography color="text.secondary" paragraph>
+                Select the service you need from our available packages
+              </Typography>
+
+              <Grid container spacing={2} sx={{ mb: 3 }}>
+                <Grid size={12}>
+                  <Autocomplete
+                    options={packages}
+                    value={selectedPackage}
+                    onChange={(_, newValue) => setSelectedPackage(newValue)}
+                    getOptionLabel={(option) => option.package_name}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Service Package"
+                        placeholder="Search for a service..."
+                        required
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li {...props} key={option.package_id}>
+                        <Box sx={{ width: "100%" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              mb: 0.5,
+                            }}
+                          >
+                            <Typography variant="body1" fontWeight="medium">
+                              {option.package_name}
+                            </Typography>
+                            <Chip
+                              label={`$${option.base_price} AUD`}
+                              size="small"
+                              color="primary"
+                            />
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            {option.description}
+                          </Typography>
+                          <Box sx={{ display: "flex", gap: 1, mt: 0.5 }}>
+                            <Chip
+                              label={formatDuration(option.duration_minutes)}
+                              size="small"
+                              variant="outlined"
+                            />
+                            <Chip
+                              label={option.category_name}
+                              size="small"
+                              variant="outlined"
+                            />
+                          </Box>
+                        </Box>
+                      </li>
+                    )}
+                  />
+                </Grid>
+
+                {/* Optional: Select Provider */}
+                <Grid size={12}>
+                  <Divider sx={{ my: 2 }}>
+                    <Chip label="Optional" size="small" />
+                  </Divider>
+                </Grid>
+
+                <Grid size={12}>
+                  <Autocomplete
+                    options={providers}
+                    value={selectedProvider}
+                    onChange={(_, newValue) => setSelectedProvider(newValue)}
+                    getOptionLabel={(option) => option.business_name}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Preferred Provider (Optional)"
+                        placeholder="Leave blank for automatic matching..."
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <li {...props} key={option.provider_id}>
+                        <Box sx={{ width: "100%" }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 1,
+                              mb: 0.5,
+                            }}
+                          >
+                            <Typography variant="body1" fontWeight="medium">
+                              {option.business_name}
+                            </Typography>
+                            {option.is_verified && (
+                              <CheckCircleIcon
+                                color="success"
+                                fontSize="small"
+                              />
+                            )}
+                            <Chip
+                              label={`⭐ ${option.average_rating}`}
+                              size="small"
+                            />
+                          </Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="block"
+                          >
+                            {option.description} • {option.address}
+                          </Typography>
+                        </Box>
+                      </li>
+                    )}
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Package Summary */}
+              {selectedPackage && (
+                <Paper
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    bgcolor: "primary.50",
+                    border: "1px solid",
+                    borderColor: "primary.200",
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    color="primary"
+                    gutterBottom
+                    fontWeight="bold"
+                  >
+                    Selected Service
+                  </Typography>
+                  <Typography variant="h6" gutterBottom>
+                    {selectedPackage.package_name}
+                  </Typography>
+                  <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                    <Chip
+                      icon={<AccessTimeIcon />}
+                      label={formatDuration(selectedPackage.duration_minutes)}
+                      size="small"
+                    />
+                    <Chip
+                      label={selectedPackage.category_name}
+                      size="small"
+                      color="primary"
+                      variant="outlined"
+                    />
+                    <Chip
+                      label={`$${selectedPackage.base_price} AUD`}
+                      size="small"
+                      color="primary"
+                    />
+                  </Stack>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedPackage.description}
+                  </Typography>
+                </Paper>
+              )}
+            </Box>
+          )}
+
+          {/* Step 2: Date & Time */}
+          {activeStep === 1 && (
+            <Box>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Pick Your Date & Time
+              </Typography>
+              <Typography color="text.secondary" paragraph>
+                Choose when you'd like the service to be performed
+              </Typography>
+
+              <Grid container spacing={3}>
+                <Grid size={12}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DatePicker
+                      label="Service Date"
+                      value={scheduledDate}
+                      onChange={(newValue) => {
+                        setScheduledDate(newValue);
+                        setSelectedStartTime(null);
+                      }}
+                      minDate={dayjs()}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+
+                {scheduledDate &&
+                  scheduledDate.isValid() &&
+                  selectedPackage && (
+                    <Grid size={12}>
+                      <TimeSlotPicker
+                        packageId={selectedPackage.package_id}
+                        date={scheduledDate.toDate()}
+                        providerId={selectedProvider?.provider_id}
+                        onSlotSelect={(time) => setSelectedStartTime(time)}
+                      />
+                    </Grid>
+                  )}
+
+                {/* Booking Summary */}
+                {selectedStartTime && (
+                  <Grid size={12}>
+                    <Paper
+                      elevation={0}
+                      sx={{
+                        p: 3,
+                        bgcolor: "success.50",
+                        border: "1px solid",
+                        borderColor: "success.200",
+                      }}
+                    >
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <CalendarMonthIcon color="success" />
+                        <Typography variant="h6">
+                          {scheduledDate.format("dddd, MMMM D, YYYY")} at{" "}
+                          {selectedStartTime}
+                        </Typography>
+                      </Stack>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mt: 1 }}
+                      >
+                        Duration:{" "}
+                        {formatDuration(selectedPackage!.duration_minutes)}
+                      </Typography>
+                    </Paper>
+                  </Grid>
+                )}
+              </Grid>
+            </Box>
+          )}
+
+          {/* Step 3: Enter Details */}
+          {activeStep === 2 && (
+            <Box>
+              <Typography variant="h5" gutterBottom fontWeight="bold">
+                Service Details
+              </Typography>
+              <Typography color="text.secondary" paragraph>
+                Tell us where and provide any special instructions
+              </Typography>
+
+              <Grid container spacing={3}>
+                {/* Booking Summary */}
+                <Grid size={12}>
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 3,
+                      bgcolor: "grey.50",
+                      border: "1px solid",
+                      borderColor: "grey.200",
+                    }}
+                  >
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
+                      Booking Summary
+                    </Typography>
+                    <Typography variant="h6" gutterBottom>
+                      {selectedPackage?.package_name}
+                    </Typography>
+                    <Stack spacing={1}>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <CalendarMonthIcon fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          {scheduledDate?.format("dddd, MMMM D, YYYY")} at{" "}
+                          {selectedStartTime}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <AccessTimeIcon fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          Duration:{" "}
+                          {formatDuration(selectedPackage!.duration_minutes)}
+                        </Typography>
+                      </Box>
+                      {selectedProvider && (
+                        <Box
+                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                        >
+                          <CheckCircleIcon fontSize="small" color="success" />
+                          <Typography variant="body2">
+                            Provider: {selectedProvider.business_name}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Stack>
+                    <Divider sx={{ my: 2 }} />
+                    <Typography variant="h5" fontWeight="bold">
+                      ${selectedPackage?.base_price} AUD
+                    </Typography>
+                  </Paper>
+                </Grid>
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Service Address"
+                    value={serviceAddress}
+                    onChange={(e) => setServiceAddress(e.target.value)}
+                    required
+                    multiline
+                    rows={2}
+                    placeholder="Enter the complete address where service is needed"
+                    InputProps={{
+                      startAdornment: (
+                        <LocationOnIcon
+                          sx={{ mr: 1, color: "action.active" }}
+                        />
+                      ),
+                    }}
+                  />
+                </Grid>
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Special Instructions (Optional)"
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    multiline
+                    rows={4}
+                    placeholder="Any specific requirements, access instructions, or notes for the service provider..."
+                  />
+                </Grid>
+              </Grid>
+            </Box>
+          )}
+
+          {/* Navigation Buttons */}
+          <Box sx={{ display: "flex", gap: 2, mt: 4 }}>
+            <Button
+              disabled={activeStep === 0}
+              onClick={handleBack}
+              size="large"
+              sx={{ minWidth: 120 }}
+            >
+              Back
+            </Button>
+            <Box sx={{ flex: 1 }} />
+            {activeStep === steps.length - 1 ? (
+              <Button
+                variant="contained"
+                onClick={handleSubmit}
+                disabled={loading || !serviceAddress.trim()}
+                size="large"
+                sx={{ minWidth: 200 }}
+              >
+                {loading ? (
+                  <CircularProgress size={24} color="inherit" />
+                ) : (
+                  "Confirm & Pay"
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleNext}
+                size="large"
+                sx={{ minWidth: 120 }}
+              >
+                Next
+              </Button>
+            )}
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Help Text */}
+      <Box sx={{ mt: 3, textAlign: "center" }}>
         <Typography variant="body2" color="text.secondary">
-          <strong>Note:</strong> All bookings are subject to provider
-          availability and COVID-19 safety checks. You'll receive a confirmation
-          email once your booking is confirmed.
+          Need help? All bookings are subject to provider availability. You'll
+          receive a confirmation email once your booking is confirmed.
         </Typography>
       </Box>
     </Box>
