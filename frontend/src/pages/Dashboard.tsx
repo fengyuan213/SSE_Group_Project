@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import {
   Box,
   Typography,
-  Grid,
   Card,
   CardMedia,
   CardContent,
@@ -17,6 +16,7 @@ import {
   IconButton,
   Stack,
 } from "@mui/material";
+import Grid from "@mui/material/Grid2";
 import {
   Verified,
   PlayArrow,
@@ -340,7 +340,10 @@ export default function Dashboard() {
       ) : (
         <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ pb: 4 }}>
           {filteredServices.map((service) => (
-            <Grid key={service.package_id} xs={12} sm={6} md={4} lg={3}>
+            <Grid
+              key={service.package_id}
+              size={{ xs: 12, sm: 6, md: 4, lg: 3 }}
+            >
               <ServiceCard service={service} onBookNow={handleBookNow} />
             </Grid>
           ))}
