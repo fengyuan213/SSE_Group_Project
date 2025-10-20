@@ -28,15 +28,55 @@ export interface BookingData {
   package_id: number;
   provider_id?: number;
   booking_type: string;
-  scheduled_date: string;
+  start_date: string; // YYYY-MM-DD
+  start_time: string; // HH:MM (must be on 30-min boundary)
   service_address: string;
   special_instructions?: string | null;
+  // Note: end_date is NOT sent - backend calculates it automatically based on service duration
+}
+
+export interface TimeSlot {
+  start_time: string; // "09:00"
+  provider_id?: number;
+  duration_minutes: number;
+}
+
+export interface AvailabilityResponse {
+  date: string;
+  available_slots: TimeSlot[];
+  required_slots: number;
 }
 
 export interface BookingResponse {
   booking_id: number;
   booking_reference: string;
   booking_status: string;
+}
+
+export interface PaymentIntentResponse {
+  client_secret: string;
+  payment_intent_id: string;
+  amount: number; // SECURE: Server sends back the actual amount from database
+  mock?: boolean;
+}
+
+export interface PaymentConfirmationResponse {
+  payment_id: number;
+  payment_reference: string;
+  booking_reference: string;
+  status: string;
+  email_sent: boolean;
+}
+
+export interface ConfirmationDetails {
+  payment_reference: string;
+  booking_reference: string;
+  amount: number;
+  package_name: string;
+  payment_status: string;
+  payment_date: string;
+  scheduled_date: string | null;
+  service_address: string | null;
 }
 
 // Demo data
@@ -186,5 +226,82 @@ export const bookingApi = {
         booking_status: "pending",
       };
     }
+  },
+
+  // Get booking by ID
+  getBooking: async (bookingId: number) => {
+    const response = await api.get(`/bookings/${bookingId}`);
+    return response.data;
+  },
+};
+
+// Payment API
+export const paymentApi = {
+  // Create payment intent
+  // SECURE: Only sends booking_id, backend calculates price from database
+  createPaymentIntent: async (
+    bookingId: number
+  ): Promise<PaymentIntentResponse> => {
+    const response = await api.post<PaymentIntentResponse>(
+      "/payments/create-intent",
+      {
+        booking_id: bookingId,
+      }
+    );
+    return response.data;
+  },
+
+  // Confirm payment
+  // SECURE: Only sends booking_id and payment_intent_id, backend validates everything
+  confirmPayment: async (
+    bookingId: number,
+    paymentIntentId: string
+  ): Promise<PaymentConfirmationResponse> => {
+    const response = await api.post<PaymentConfirmationResponse>(
+      "/payments/confirm",
+      {
+        booking_id: bookingId,
+        payment_intent_id: paymentIntentId,
+      }
+    );
+    return response.data;
+  },
+
+  // Get payment by booking ID
+  getPaymentByBooking: async (bookingId: number) => {
+    const response = await api.get(`/payments/booking/${bookingId}`);
+    return response.data;
+  },
+
+  // Get confirmation details by payment reference
+  // SECURE: Backend validates payment_reference and returns all data from DB
+  getConfirmationDetails: async (
+    paymentReference: string
+  ): Promise<ConfirmationDetails> => {
+    const response = await api.get<ConfirmationDetails>(
+      `/payments/confirmation/${encodeURIComponent(paymentReference)}`
+    );
+    return response.data;
+  },
+};
+
+// Availability API
+export const availabilityApi = {
+  getAvailableSlots: async (
+    packageId: number,
+    date: string,
+    providerId?: number
+  ): Promise<AvailabilityResponse> => {
+    const params = new URLSearchParams({
+      package_id: packageId.toString(),
+      date: date,
+    });
+    if (providerId) {
+      params.append("provider_id", providerId.toString());
+    }
+    const response = await api.get<AvailabilityResponse>(
+      `/availability/slots?${params}`
+    );
+    return response.data;
   },
 };

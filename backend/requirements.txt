@@ -13,6 +13,11 @@ pyjwt
 six
 authlib>=1.0
 requests>=2.27.1
+# Database
+psycopg2-binary>=2.9.9
+# Payment & Email
+stripe>=7.0.0
+resend>=0.8.0
 # Development dependencies
 pylint>=3.0.0
 pyright>=1.1.0

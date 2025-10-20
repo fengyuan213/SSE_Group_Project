@@ -11,7 +11,10 @@ import {
 } from "@mui/material";
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import Booking from "./pages/Booking.tsx";
+import Payment from "./pages/Payment.tsx";
+import Confirmation from "./pages/Confirmation.tsx";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { ROUTES } from "./lib/routes";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -32,10 +35,10 @@ export default function App() {
           <Typography variant="h6" sx={{ flexGrow: 1 }}>
             Home Services Booking
           </Typography>
-          <Button color="inherit" component={Link} to="/">
+          <Button color="inherit" component={Link} to={ROUTES.HOME}>
             Home
           </Button>
-          <Button color="inherit" component={Link} to="/booking/general">
+          <Button color="inherit" component={Link} to={ROUTES.BOOKING_GENERAL}>
             General Booking
           </Button>
           <Box sx={{ ml: 2 }}>
@@ -59,7 +62,7 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route
-              path="/"
+              path={ROUTES.HOME}
               element={
                 <Box>
                   <Typography variant="h4" gutterBottom>
@@ -71,8 +74,10 @@ export default function App() {
                 </Box>
               }
             />
-            <Route path="/booking/general" element={<Booking />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
+            <Route path={ROUTES.PAYMENT} element={<Payment />} />
+            <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
+            <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
         </ErrorBoundary>
       </Container>

@@ -102,9 +102,14 @@ CREATE TABLE service_providers (
     total_reviews INT DEFAULT 0,
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    max_concurrent_jobs INT DEFAULT 1,
+    working_hours_start TIME DEFAULT '09:00',
+    working_hours_end TIME DEFAULT '17:00',
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+COMMENT ON COLUMN service_providers.max_concurrent_jobs IS 'Maximum number of jobs provider can handle simultaneously';
 
 CREATE INDEX idx_providers_location ON service_providers(latitude, longitude);
 CREATE INDEX idx_providers_active ON service_providers(is_active);
@@ -191,6 +196,58 @@ CREATE TRIGGER set_booking_reference
 BEFORE  INSERT ON bookings
 FOR EACH ROW
 EXECUTE FUNCTION generate_booking_reference();
+
+-- Provider Availability (Provider calendar blocks - vacations, sick days, holidays)
+CREATE TABLE provider_availability (
+    availability_id SERIAL PRIMARY KEY,
+    provider_id INT REFERENCES service_providers(provider_id) ON DELETE CASCADE,
+    date DATE NOT NULL,
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    reason VARCHAR(100),
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(provider_id, date, start_time, end_time)
+);
+
+CREATE INDEX idx_provider_availability ON provider_availability(provider_id, date);
+
+COMMENT ON TABLE provider_availability IS 'Provider calendar blocks (vacation, sick leave) - separate from customer bookings';
+
+-- Booking Time Slots (30-minute slot reservations - SINGLE SOURCE OF TRUTH)
+CREATE TABLE booking_time_slots (
+    booking_slot_id SERIAL PRIMARY KEY,
+    booking_id INT REFERENCES bookings(booking_id) ON DELETE CASCADE,
+    provider_id INT REFERENCES service_providers(provider_id) ON DELETE CASCADE,
+    slot_date DATE NOT NULL,
+    slot_time TIME NOT NULL,
+    status VARCHAR(50) DEFAULT 'booked',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_slot_time CHECK (
+        EXTRACT(MINUTE FROM slot_time)::INT IN (0, 30)
+    )
+);
+
+CREATE INDEX idx_booking_slots_provider_date ON booking_time_slots(provider_id, slot_date, slot_time);
+CREATE INDEX idx_booking_slots_booking ON booking_time_slots(booking_id);
+
+COMMENT ON TABLE booking_time_slots IS 'Individual 30-min slot reservations - SINGLE SOURCE OF TRUTH for booking times';
+COMMENT ON CONSTRAINT valid_slot_time ON booking_time_slots IS 'Enforce 30-minute intervals (00 or 30 minutes)';
+
+-- Booking Time Ranges View (convenience view for querying booking start/end times)
+CREATE OR REPLACE VIEW booking_time_ranges AS
+SELECT
+    b.booking_id,
+    b.booking_reference,
+    MIN(bts.slot_date + bts.slot_time) AS start_datetime,
+    MAX(bts.slot_date + bts.slot_time) + INTERVAL '30 minutes' AS end_datetime,
+    COUNT(DISTINCT bts.slot_date) AS days_span,
+    COUNT(*) AS total_slots,
+    b.booking_status
+FROM bookings b
+JOIN booking_time_slots bts ON b.booking_id = bts.booking_id
+WHERE bts.status = 'booked'
+GROUP BY b.booking_id, b.booking_reference, b.booking_status;
 
 -- Urgent Work Booking Link (Module 3.1 - Attach urgent work to bookings)
 CREATE TABLE booking_urgent_items (
@@ -397,16 +454,16 @@ DECLARE
     audit_retention INTERVAL;
 BEGIN
     -- Fetch retention intervals
-    SELECT retention_period INTO personal_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO personal_retention
+    FROM data_retention_policies
     WHERE data_type = 'personal_data' AND auto_delete_enabled = TRUE;
 
-    SELECT retention_period INTO booking_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO booking_retention
+    FROM data_retention_policies
     WHERE data_type = 'bookings' AND auto_delete_enabled = TRUE;
 
-    SELECT retention_period INTO audit_retention 
-    FROM data_retention_policies 
+    SELECT retention_period INTO audit_retention
+    FROM data_retention_policies
     WHERE data_type = 'audit_logs' AND auto_delete_enabled = TRUE;
 
     -- === Delete old users
@@ -443,7 +500,7 @@ $$ LANGUAGE plpgsql;
 
 -- View: Active bookings with user and provider details
 CREATE OR REPLACE VIEW active_bookings_view AS
-SELECT 
+SELECT
     b.booking_id,
     b.booking_reference,
     b.booking_status,
@@ -462,7 +519,7 @@ JOIN service_packages pkg ON b.package_id = pkg.package_id
 WHERE b.booking_status NOT IN ('completed', 'cancelled');
 -- View: Provider performance metrics
 CREATE OR REPLACE VIEW provider_performance_view AS
-SELECT 
+SELECT
     sp.provider_id,
     sp.business_name,
     sp.average_rating,
@@ -520,9 +577,9 @@ SELECT id, 1 FROM users WHERE email = 'admin@example.com';
 
 INSERT INTO user_roles (user_id, role_id)
 SELECT id, 3 FROM users WHERE email IN (
-  'john.doe@example.com', 
-  'jane.smith@example.com', 
-  'michael.lee@example.com', 
+  'john.doe@example.com',
+  'jane.smith@example.com',
+  'michael.lee@example.com',
   'sara.connor@example.com'
 );
 
@@ -570,6 +627,13 @@ FROM (
   ((SELECT id FROM users WHERE email='quick.maint@example.com'), 'Quick Maintenance', 'General repairs and maintenance', 55.9533, -3.1883, 'Edinburgh, UK', 40, TRUE, 4.9)
 ) AS data(user_id, business_name, description, latitude, longitude, address, radius, verified, rating);
 
+-- Update providers with working hours and capacity
+UPDATE service_providers
+SET max_concurrent_jobs = 2,
+    working_hours_start = '08:00',
+    working_hours_end = '18:00'
+WHERE provider_id IN (1, 2, 3, 4, 5);
+
 
 
 INSERT INTO service_packages (category_id, package_name, description, base_price, duration_minutes, requires_inspection)
@@ -581,6 +645,31 @@ VALUES
 (3, 'Heating System Tune-up', 'Full service for heating units', 260.00, 120, TRUE),
 (4, 'Furniture Assembly', 'Assembling and installation of furniture', 150.00, 60, FALSE);
 
+-- Link providers to service packages (provider_services)
+-- Provider 1 (PlumberPro) offers plumbing services
+-- Provider 2 (ElectroFix) offers electrical services
+-- Provider 3 (HVAC Expert) offers HVAC services
+-- Provider 4 (CleanHome) offers general services
+-- Provider 5 (Quick Maintenance) offers general maintenance
+INSERT INTO provider_services (provider_id, package_id, is_available)
+VALUES
+-- Provider 1: Plumbing packages
+(1, 1, TRUE),  -- Basic Plumbing Inspection
+(1, 2, TRUE),  -- Emergency Leak Repair
+(1, 6, TRUE),  -- Pipe Replacement Service
+-- Provider 2: Electrical packages
+(2, 3, TRUE),  -- Electrical Safety Check
+(2, 7, TRUE),  -- Lighting Installation
+-- Provider 3: HVAC packages
+(3, 4, TRUE),  -- AC Maintenance
+(3, 8, TRUE),  -- AC Gas Refill
+(3, 9, TRUE),  -- Heating System Tune-up
+-- Provider 4: General services
+(4, 5, TRUE),  -- Full Home Maintenance
+(4, 10, TRUE), -- Furniture Assembly
+-- Provider 5: General maintenance
+(5, 5, TRUE),  -- Full Home Maintenance
+(5, 10, TRUE); -- Furniture Assembly
 
 -- Fake bookings
 INSERT INTO bookings (user_id, package_id, provider_id, booking_type, booking_status, scheduled_date, service_address, special_instructions)

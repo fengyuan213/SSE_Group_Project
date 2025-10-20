@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { buildPaymentRoute } from "../lib/routes";
 import {
   Box,
   Card,
@@ -18,10 +20,11 @@ import {
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import type { SelectChangeEvent } from "@mui/material";
-import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import TimeSlotPicker from "../components/TimeSlotPicker";
 import {
   bookingApi,
   type ServicePackage,
@@ -50,20 +53,19 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function Booking() {
+  const navigate = useNavigate();
+
+  // UI State
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
-  // Service packages and providers
+  // Data
   const [packages, setPackages] = useState<ServicePackage[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
-  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>(
-    []
-  );
 
-  // Form data
+  // Form State
   const [selectedPackage, setSelectedPackage] = useState<string>("");
   const [selectedProvider, setSelectedProvider] = useState<string>("");
   const [scheduledDate, setScheduledDate] = useState<Dayjs | null>(
@@ -71,66 +73,36 @@ export default function Booking() {
   );
   const [serviceAddress, setServiceAddress] = useState("");
   const [specialInstructions, setSpecialInstructions] = useState("");
+  const [selectedStartTime, setSelectedStartTime] = useState<string | null>(
+    null
+  );
 
-  // Fetch data functions using centralized API
-  const fetchPackages = useCallback(async () => {
-    try {
-      const data = await bookingApi.getPackages();
-      setPackages(data);
-    } catch (err) {
-      console.error("Error fetching packages:", err);
-      setError("Failed to load service packages.");
-    }
-  }, []);
-
-  const fetchProviders = useCallback(async () => {
-    try {
-      const data = await bookingApi.getProviders();
-      setProviders(data);
-      setFilteredProviders(data);
-    } catch (err) {
-      console.error("Error fetching providers:", err);
-      setError("Failed to load service providers.");
-    }
-  }, []);
-
-  // Fetch service packages and providers on mount
+  // Load initial data
   useEffect(() => {
     const loadData = async () => {
       setInitialLoading(true);
-      await Promise.all([fetchPackages(), fetchProviders()]);
-      setInitialLoading(false);
+      try {
+        const [packagesData, providersData] = await Promise.all([
+          bookingApi.getPackages(),
+          bookingApi.getProviders(),
+        ]);
+        setPackages(packagesData);
+        setProviders(providersData);
+      } catch (err) {
+        console.error("Error loading data:", err);
+        setError("Failed to load data. Please refresh the page.");
+      } finally {
+        setInitialLoading(false);
+      }
     };
     loadData();
-  }, [fetchPackages, fetchProviders]);
+  }, []);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setError(null);
-    setSuccess(null);
     resetForm();
   };
-
-  const handlePackageChange = useCallback(
-    (event: SelectChangeEvent<string>) => {
-      const packageId = event.target.value;
-      setSelectedPackage(packageId);
-
-      // Filter providers based on selected package category
-      const selectedPkg = packages.find(
-        (pkg) => pkg.package_id.toString() === packageId
-      );
-
-      if (selectedPkg && selectedPkg.category_id) {
-        // Filter providers that offer services in the selected category
-        // For now, show all providers - in production this would filter by category
-        setFilteredProviders(providers);
-      } else {
-        setFilteredProviders(providers);
-      }
-    },
-    [packages, providers]
-  );
 
   const resetForm = () => {
     setSelectedPackage("");
@@ -138,44 +110,49 @@ export default function Booking() {
     setScheduledDate(dayjs().add(1, "day"));
     setServiceAddress("");
     setSpecialInstructions("");
-    setFilteredProviders(providers); // Reset filtered providers to show all
+    setSelectedStartTime(null);
   };
 
-  const handleGeneralBooking = async (e: React.FormEvent) => {
+  const handlePackageChange = (event: SelectChangeEvent<string>) => {
+    setSelectedPackage(event.target.value);
+    setSelectedStartTime(null); // Reset time when package changes
+  };
+
+  const handleProviderChange = (event: SelectChangeEvent<string>) => {
+    setSelectedProvider(event.target.value);
+    setSelectedStartTime(null); // Reset time when provider changes
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!selectedStartTime) {
+      setError("Please select a time slot");
+      return;
+    }
+
+    if (!scheduledDate || !scheduledDate.isValid()) {
+      setError("Please select a valid date");
+      return;
+    }
+
     setLoading(true);
     setError(null);
-    setSuccess(null);
 
     try {
-      const selectedPkg = packages.find(
-        (pkg) => pkg.package_id.toString() === selectedPackage
-      );
-
-      if (!selectedPkg) {
-        throw new Error("Selected package not found");
-      }
-
-      // Capture the package name before resetting form
-      const packageName = selectedPkg.package_name;
-
       const bookingData = {
         package_id: Number(selectedPackage),
+        ...(tabValue === 1 &&
+          selectedProvider && { provider_id: Number(selectedProvider) }),
         booking_type: "non-urgent",
-        scheduled_date: scheduledDate?.toISOString() || "",
+        start_date: scheduledDate.format("YYYY-MM-DD"),
+        start_time: selectedStartTime,
         service_address: serviceAddress,
         special_instructions: specialInstructions || null,
       };
 
       const response = await bookingApi.createBooking(bookingData);
-
-      // Reset form first to clear state
-      resetForm();
-
-      // Then set success message with captured values
-      setSuccess(
-        `Booking created successfully! Reference: ${response.booking_reference}. We'll match you with a provider for ${packageName}.`
-      );
+      navigate(buildPaymentRoute(response.booking_reference));
     } catch (err) {
       console.error("Error creating booking:", err);
       setError("Failed to create booking. Please try again.");
@@ -184,102 +161,16 @@ export default function Booking() {
     }
   };
 
-  const handleProviderBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const selectedProv = providers.find(
-        (prov) => prov.provider_id.toString() === selectedProvider
-      );
-      const selectedPkg = packages.find(
-        (pkg) => pkg.package_id.toString() === selectedPackage
-      );
-
-      if (!selectedProv) {
-        throw new Error("Selected provider not found");
-      }
-
-      if (!selectedPkg) {
-        throw new Error("Selected package not found");
-      }
-
-      // Capture values before resetting form
-      const providerName = selectedProv.business_name;
-      const packageName = selectedPkg.package_name;
-
-      const bookingData = {
-        package_id: Number(selectedPackage),
-        provider_id: Number(selectedProvider),
-        booking_type: "non-urgent",
-        scheduled_date: scheduledDate?.toISOString() || "",
-        service_address: serviceAddress,
-        special_instructions: specialInstructions || null,
-      };
-
-      const response = await bookingApi.createBooking(bookingData);
-
-      // Reset form first to clear state
-      resetForm();
-
-      // Then set success message with captured values
-      setSuccess(
-        `Booking created successfully! Reference: ${response.booking_reference}. Booked with ${providerName} for ${packageName}!`
-      );
-    } catch (err) {
-      console.error("Error creating booking:", err);
-      setError("Failed to create booking. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const formatDuration = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""}`;
+    return `${mins} min`;
   };
 
-  const renderCommonFields = () => (
-    <>
-      <Grid size={12}>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DateTimePicker
-            label="Preferred Date & Time"
-            value={scheduledDate}
-            onChange={(newValue) => setScheduledDate(newValue)}
-            minDateTime={dayjs()}
-            slotProps={{
-              textField: {
-                fullWidth: true,
-                required: true,
-              },
-            }}
-          />
-        </LocalizationProvider>
-      </Grid>
-
-      <Grid size={12}>
-        <TextField
-          fullWidth
-          label="Service Address"
-          value={serviceAddress}
-          onChange={(e) => setServiceAddress(e.target.value)}
-          required
-          multiline
-          rows={2}
-          placeholder="Enter the address where service is needed"
-        />
-      </Grid>
-
-      <Grid size={12}>
-        <TextField
-          fullWidth
-          label="Special Instructions (Optional)"
-          value={specialInstructions}
-          onChange={(e) => setSpecialInstructions(e.target.value)}
-          multiline
-          rows={3}
-          placeholder="Any specific requirements or notes for the service provider"
-        />
-      </Grid>
-    </>
+  const selectedPackageData = packages.find(
+    (pkg) => pkg.package_id.toString() === selectedPackage
   );
 
   if (initialLoading) {
@@ -327,19 +218,9 @@ export default function Booking() {
             </Alert>
           )}
 
-          {success && (
-            <Alert
-              severity="success"
-              sx={{ mt: 2 }}
-              onClose={() => setSuccess(null)}
-            >
-              {success}
-            </Alert>
-          )}
-
           {/* General Service Booking Tab */}
           <TabPanel value={tabValue} index={0}>
-            <form onSubmit={handleGeneralBooking}>
+            <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
                 <Grid size={12}>
                   <Alert severity="info">
@@ -372,7 +253,7 @@ export default function Booking() {
                                 {pkg.package_name}
                               </Typography>
                               <Chip
-                                label={`£${pkg.base_price}`}
+                                label={`$${pkg.base_price} AUD`}
                                 size="small"
                                 color="primary"
                               />
@@ -391,7 +272,75 @@ export default function Booking() {
                   </FormControl>
                 </Grid>
 
-                {renderCommonFields()}
+                {selectedPackageData && (
+                  <Grid size={12}>
+                    <Alert severity="info" icon={<Typography>⏱️</Typography>}>
+                      <Typography variant="body2">
+                        <strong>Service duration:</strong>{" "}
+                        {formatDuration(selectedPackageData.duration_minutes)}
+                        {selectedPackageData.duration_minutes > 480 &&
+                          " - May span multiple days"}
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+
+                <Grid size={12}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DatePicker
+                      label="Service Date"
+                      value={scheduledDate}
+                      onChange={(newValue) => {
+                        setScheduledDate(newValue);
+                        setSelectedStartTime(null);
+                      }}
+                      minDate={dayjs()}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+
+                {selectedPackage &&
+                  scheduledDate &&
+                  scheduledDate.isValid() && (
+                    <Grid size={12}>
+                      <TimeSlotPicker
+                        packageId={Number(selectedPackage)}
+                        date={scheduledDate.toDate()}
+                        onSlotSelect={(time) => setSelectedStartTime(time)}
+                      />
+                    </Grid>
+                  )}
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Service Address"
+                    value={serviceAddress}
+                    onChange={(e) => setServiceAddress(e.target.value)}
+                    required
+                    multiline
+                    rows={2}
+                    placeholder="Enter the address where service is needed"
+                  />
+                </Grid>
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Special Instructions (Optional)"
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    multiline
+                    rows={3}
+                    placeholder="Any specific requirements or notes for the service provider"
+                  />
+                </Grid>
 
                 <Grid size={12}>
                   <Button
@@ -399,7 +348,12 @@ export default function Booking() {
                     variant="contained"
                     size="large"
                     fullWidth
-                    disabled={loading || !selectedPackage || !serviceAddress}
+                    disabled={
+                      loading ||
+                      !selectedPackage ||
+                      !serviceAddress ||
+                      !selectedStartTime
+                    }
                   >
                     {loading ? <CircularProgress size={24} /> : "Book Service"}
                   </Button>
@@ -410,7 +364,7 @@ export default function Booking() {
 
           {/* Book by Provider Tab */}
           <TabPanel value={tabValue} index={1}>
-            <form onSubmit={handleProviderBooking}>
+            <form onSubmit={handleSubmit}>
               <Grid container spacing={3}>
                 <Grid size={12}>
                   <Alert severity="info">
@@ -423,10 +377,10 @@ export default function Booking() {
                     <InputLabel>Service Provider</InputLabel>
                     <Select
                       value={selectedProvider}
-                      onChange={(e) => setSelectedProvider(e.target.value)}
+                      onChange={handleProviderChange}
                       label="Service Provider"
                     >
-                      {filteredProviders.map((provider) => (
+                      {providers.map((provider) => (
                         <MenuItem
                           key={provider.provider_id}
                           value={provider.provider_id.toString()}
@@ -492,7 +446,7 @@ export default function Booking() {
                                 {pkg.package_name}
                               </Typography>
                               <Chip
-                                label={`£${pkg.base_price}`}
+                                label={`$${pkg.base_price} AUD`}
                                 size="small"
                                 color="primary"
                               />
@@ -511,7 +465,80 @@ export default function Booking() {
                   </FormControl>
                 </Grid>
 
-                {renderCommonFields()}
+                {selectedPackageData && (
+                  <Grid size={12}>
+                    <Alert severity="info" icon={<Typography>⏱️</Typography>}>
+                      <Typography variant="body2">
+                        <strong>Service duration:</strong>{" "}
+                        {formatDuration(selectedPackageData.duration_minutes)}
+                        {selectedPackageData.duration_minutes > 480 &&
+                          " - May span multiple days"}
+                      </Typography>
+                    </Alert>
+                  </Grid>
+                )}
+
+                <Grid size={12}>
+                  <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <DatePicker
+                      label="Service Date"
+                      value={scheduledDate}
+                      onChange={(newValue) => {
+                        setScheduledDate(newValue);
+                        setSelectedStartTime(null);
+                      }}
+                      minDate={dayjs()}
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                        },
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+
+                {selectedPackage &&
+                  scheduledDate &&
+                  scheduledDate.isValid() && (
+                    <Grid size={12}>
+                      <TimeSlotPicker
+                        packageId={Number(selectedPackage)}
+                        date={scheduledDate.toDate()}
+                        providerId={
+                          selectedProvider
+                            ? Number(selectedProvider)
+                            : undefined
+                        }
+                        onSlotSelect={(time) => setSelectedStartTime(time)}
+                      />
+                    </Grid>
+                  )}
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Service Address"
+                    value={serviceAddress}
+                    onChange={(e) => setServiceAddress(e.target.value)}
+                    required
+                    multiline
+                    rows={2}
+                    placeholder="Enter the address where service is needed"
+                  />
+                </Grid>
+
+                <Grid size={12}>
+                  <TextField
+                    fullWidth
+                    label="Special Instructions (Optional)"
+                    value={specialInstructions}
+                    onChange={(e) => setSpecialInstructions(e.target.value)}
+                    multiline
+                    rows={3}
+                    placeholder="Any specific requirements or notes for the service provider"
+                  />
+                </Grid>
 
                 <Grid size={12}>
                   <Button
@@ -523,7 +550,8 @@ export default function Booking() {
                       loading ||
                       !selectedPackage ||
                       !selectedProvider ||
-                      !serviceAddress
+                      !serviceAddress ||
+                      !selectedStartTime
                     }
                   >
                     {loading ? (
