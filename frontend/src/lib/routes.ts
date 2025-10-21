@@ -10,6 +10,7 @@ export const ROUTES = {
   BOOKING_GENERAL: "/booking/general",
   PAYMENT: "/payment",
   CONFIRMATION: "/confirmation",
+  PROFILE: "/profile",
 } as const;
 
 /**
@@ -43,3 +44,9 @@ export const getPaymentReferenceFromUrl = (
 ): string | null => {
   return searchParams.get("payment_reference");
 };
+
+// Type for route keys
+export type RouteKey = keyof typeof ROUTES;
+
+// Type for route values
+export type RouteValue = (typeof ROUTES)[RouteKey];

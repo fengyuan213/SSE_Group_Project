@@ -18,7 +18,9 @@ export default defineConfig({
       interval: 100, // Check for changes every 100ms
     },
     hmr: {
-      host: "localhost", // Hot Module Replacement host
+      // Remove host or set to undefined to auto-detect in Codespaces
+      clientPort: 443, // Use HTTPS port for Codespaces
+      protocol: "wss", // Use secure WebSocket (wss://)
     },
     proxy: {
       "/api": {
