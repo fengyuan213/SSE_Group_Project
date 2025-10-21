@@ -7,60 +7,65 @@
   // VS Code customizations
   "customizations": {
     "vscode": {
-      // Recommended extensions
+      // Recommended extensions (optimized for performance - heavy extensions commented out)
       "extensions": [
-        // Python extensions
+        // Python extensions - Essential
         "ms-python.python",
         "ms-python.black-formatter",
         "ms-python.isort",
-        "ms-python.pylint",
         "ms-python.debugpy",
-        "donjayamanne.python-extension-pack",
-        "donjayamanne.python-environment-manager",
-        "kevinrose.vsc-python-indent",
-        "njpwerner.autodocstring",
+        // Heavy/redundant Python extensions (commented for performance):
+        //"ms-python.pylint",  // Use Pylance instead
+        //"donjayamanne.python-extension-pack",  // Heavy bundle
+        //"donjayamanne.python-environment-manager",  // Not essential
+        //"kevinrose.vsc-python-indent",  // Minor utility
+        //"njpwerner.autodocstring",  // Nice-to-have
         //"batisteo.vscode-django",
 
-        // JavaScript/TypeScript/Node extensions
+        // JavaScript/TypeScript/Node extensions - Essential
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        //"bradlc.vscode-tailwindcss",
-        "ms-vscode.vscode-typescript-tslint-plugin",
-        "afractal.node-essentials",
         "christian-kohler.path-intellisense",
-        "leizongmin.node-module-intellisense",
-        "jasonnutter.search-node-modules",
-        "tgreen7.vs-code-node-require",
-        "wix.vscode-import-cost",
+        // Heavy/redundant JS/TS extensions (commented for performance):
+        //"bradlc.vscode-tailwindcss",
+        //"ms-vscode.vscode-typescript-tslint-plugin",  // Deprecated
+        //"afractal.node-essentials",  // Bundle of utilities
+        //"leizongmin.node-module-intellisense",  // Redundant
+        //"jasonnutter.search-node-modules",  // Not essential
+        //"tgreen7.vs-code-node-require",  // Minor utility
+        //"wix.vscode-import-cost",  // Very resource intensive!
 
         // React extensions
         "dsznajder.es7-react-js-snippets",
 
-
-
         // Docker & Kubernetes extensions
-        //"ms-azuretools.vscode-docker",
         "ms-azuretools.vscode-containers",
+        //"ms-azuretools.vscode-docker",
 
         // Git & Collaboration extensions
-        "eamodio.gitlens",
         "github.vscode-pull-request-github",
-        "ms-vsliveshare.vsliveshare",
+        // Heavy Git extensions (commented for performance):
+        //"eamodio.gitlens",  // Very resource intensive but feature-rich
+        //"ms-vsliveshare.vsliveshare",  // Not needed for solo work
 
         // Data & Config extensions
         "mikestead.dotenv",
-
-        // Utilities
-        "streetsidesoftware.code-spell-checker",
         "editorconfig.editorconfig",
+
+        // Utilities (commented for performance):
+        //"streetsidesoftware.code-spell-checker",  // Resource intensive
         //"gruntfuggly.todo-tree"
       ],
 
       // VS Code settings
       "settings": {
-        // Python settings
+        // Python settings - Optimized for performance
         "python.defaultInterpreterPath": "/workspace/backend/.venv/bin/python",
         "python.terminal.activateEnvironment": true,
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.autoImportCompletions": true,
+        "python.analysis.indexing": true,
+
         "python.linting.enabled": true,
         "python.linting.pylintEnabled": true,
         "python.linting.pyrightEnabled": true,
