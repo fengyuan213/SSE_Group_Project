@@ -1,42 +1,27 @@
 #!/bin/bash
+# Runs automatically after DevContainer creation, BEFORE npm run setup
+# This script prepares the environment for installation
+set -e
 
-# Script that runs automatically after DevContainer creation
-# This script executes after the container is created to setup the development environment
-
-set -e  # Exit immediately on error
-
-#!/bin/bash
-# Simple post-setup tasks that run after npm dependencies are installed
-
-# -----------------------------------------------------------------------------
-# 1. Create .env files from env.example (root, backend, frontend)
-# -----------------------------------------------------------------------------
-for d in . backend frontend; do
-    if [ ! -f "$d/.env" ] && [ -f "$d/env.example" ]; then
-        cp "$d/env.example" "$d/.env"
-        echo "✓ Created $d/.env from $d/env.example"
-    fi
-done
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🚀 Running post-create setup..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
 # -----------------------------------------------------------------------------
-# 2. Load root .env file (safe parsing)
-# -----------------------------------------------------------------------------
-if [ -f .env ]; then
-    # Load non-commented, non-empty lines safely
-    set -a
-    # shellcheck disable=SC2046
-    export $(grep -v '^[#[:space:]]' .env | sed 's/\r$//' | xargs -0 -n1)
-    set +a
-    echo "✓ Environment variables loaded from .env"
-fi
-
-# -----------------------------------------------------------------------------
-# 3. Git configuration and user detection
+# 1. Git configuration (must happen BEFORE git pull)
 # -----------------------------------------------------------------------------
 git config --global --add safe.directory /workspace 2>/dev/null || true
 git config --global commit.gpgsign false 2>/dev/null || true
 
-# Prefer values already loaded from .env
+# Set Git user identity from .env if exists, or use defaults
+if [ -f .env ]; then
+    GIT_USER_NAME=$(grep -E '^GIT_USER_NAME=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
+    GIT_USER_EMAIL=$(grep -E '^GIT_USER_EMAIL=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
+fi
+
+# Fallback to environment variables or defaults
 if [ -z "$GIT_USER_NAME" ]; then
     # Codespaces / GitHub Actions
     if [ -n "$GIT_COMMITTER_NAME" ] && [ -n "$GIT_COMMITTER_EMAIL" ]; then
@@ -61,70 +46,47 @@ if [ -z "$GIT_USER_NAME" ]; then
     fi
 fi
 
-# Apply Git identity if found
+# Apply Git identity
 if [ -n "$GIT_USER_NAME" ]; then
     git config --global user.name "$GIT_USER_NAME"
     git config --global user.email "$GIT_USER_EMAIL"
-    echo "✓ Git user automatically set: $GIT_USER_NAME <$GIT_USER_EMAIL>"
+    echo "✓ Git user configured: $GIT_USER_NAME <$GIT_USER_EMAIL>"
 fi
 
 echo "✓ Git configured"
 
 # -----------------------------------------------------------------------------
-# 4. Auto-load .env in future shells (~/.bashrc and ~/.zshrc)
+# 2. Git pull latest changes on current branch
 # -----------------------------------------------------------------------------
-if [ -f .env ]; then
-    ENV_LOAD_BLOCK=$(cat <<'EOF'
+if git rev-parse --git-dir > /dev/null 2>&1; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
-# Load environment variables from /workspace/.env
-if [ -f /workspace/.env ]; then
-    set -a
-    source <(grep -v '^[#[:space:]]' /workspace/.env | sed 's/\r$//')
-    set +a
-fi
-EOF
-)
-
-    # Add to ~/.zshrc if not already present
-    if [ -f ~/.zshrc ] && ! grep -q "Load environment variables from /workspace/.env" ~/.zshrc; then
-        echo "$ENV_LOAD_BLOCK" >> ~/.zshrc
-        echo "✓ Environment auto-load added to ~/.zshrc"
+    # Check if current branch has an upstream
+    if git rev-parse --abbrev-ref --symbolic-full-name @{u} > /dev/null 2>&1; then
+        echo "Pulling latest changes from $CURRENT_BRANCH..."
+        if git pull --rebase; then
+            echo "✓ Successfully pulled latest changes"
+        else
+            echo "⚠️  Git pull failed. You may need to resolve conflicts manually."
+        fi
+    else
+        echo "⚠️  No upstream branch configured for $CURRENT_BRANCH. Skipping git pull."
     fi
-
-    # Add to ~/.bashrc if not already present
-    if [ -f ~/.bashrc ] && ! grep -q "Load environment variables from /workspace/.env" ~/.bashrc; then
-        echo "$ENV_LOAD_BLOCK" >> ~/.bashrc
-        echo "✓ Environment auto-load added to ~/.bashrc"
-    fi
+else
+    echo "⚠️  Not in a git repository. Skipping git pull."
 fi
 
-# 8. Completion message
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-print_success "Development environment setup complete!"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "🎉 You can now start developing!"
-echo ""
-echo "Common commands:"
-echo "  npm run dev          - Start both frontend and backend"
-echo "  npm run dev:frontend - Start frontend only"
-echo "  npm run dev:backend  - Start backend only"
-echo "  npm run build        - Build the project"
-echo "  npm run lint         - Run code linting"
-echo ""
-echo "Database connection:"
-echo "  Host: db"
-echo "  Port: 5432"
-echo "  Database: sse_project"
-echo "  Username: postgres"
-echo "  Password: postgres"
-echo ""
-echo "pgAdmin (Database Management UI):"
-echo "  URL: http://localhost:5050"
-echo "  Email: admin@admin.com"
-echo "  Password: admin"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# -----------------------------------------------------------------------------
+# 3. Create .env files from env.example (if they don't exist)
+# -----------------------------------------------------------------------------
+for d in . backend frontend; do
+    if [ ! -f "$d/.env" ] && [ -f "$d/env.example" ]; then
+        cp "$d/env.example" "$d/.env"
+        echo "✓ Created $d/.env from $d/env.example"
+    fi
+done
 
-
+echo ""
+echo "✓ Post-create setup complete!"
+echo "  → Now running npm run setup..."
+echo ""
