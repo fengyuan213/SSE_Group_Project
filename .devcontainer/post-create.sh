@@ -21,6 +21,7 @@ git config --global commit.gpgsign false 2>/dev/null || true
 if [ -n "$CODESPACES" ] && [ -n "$GITHUB_TOKEN" ] && command -v gh >/dev/null 2>&1; then
     echo "🔐 Authenticating GitHub CLI with GITHUB_TOKEN..."
     if echo "$GITHUB_TOKEN" | gh auth login --with-token 2>/dev/null; then
+        git config --global commit.gpgsign true 2>/dev/null || true
         echo "✓ GitHub CLI authenticated successfully"
     else
         echo "⚠️  GitHub CLI authentication failed (non-fatal)"
