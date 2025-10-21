@@ -81,12 +81,37 @@ CREATE TABLE service_packages (
     duration_minutes INT, -- Estimated service duration
     is_active BOOLEAN DEFAULT TRUE,
     requires_inspection BOOLEAN DEFAULT FALSE,
+    package_type VARCHAR(20) DEFAULT 'single' CHECK (package_type IN ('single', 'bundle')),
+    discount_percentage DECIMAL(5, 2) DEFAULT 0.00 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
+    is_customizable BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+COMMENT ON COLUMN service_packages.package_type IS 'Type: single (individual service) or bundle (multiple services)';
+COMMENT ON COLUMN service_packages.discount_percentage IS 'Discount applied to bundle compared to sum of individual services';
+COMMENT ON COLUMN service_packages.is_customizable IS 'Whether users can add/remove services from this bundle';
+
 CREATE INDEX idx_service_packages_category ON service_packages(category_id);
 CREATE INDEX idx_service_packages_active ON service_packages(is_active);
+
+-- Bundle Items (Junction table: Which services are included in a bundle)
+CREATE TABLE bundle_items (
+    bundle_item_id SERIAL PRIMARY KEY,
+    bundle_package_id INT NOT NULL REFERENCES service_packages(package_id) ON DELETE CASCADE,
+    included_package_id INT NOT NULL REFERENCES service_packages(package_id) ON DELETE CASCADE,
+    is_optional BOOLEAN DEFAULT FALSE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT no_self_reference CHECK (bundle_package_id != included_package_id),
+    CONSTRAINT unique_bundle_item UNIQUE (bundle_package_id, included_package_id)
+);
+
+CREATE INDEX idx_bundle_items_bundle ON bundle_items(bundle_package_id);
+CREATE INDEX idx_bundle_items_included ON bundle_items(included_package_id);
+
+COMMENT ON TABLE bundle_items IS 'Defines which individual services are included in bundle packages';
+COMMENT ON COLUMN bundle_items.is_optional IS 'Whether customer can remove this service to save cost';
 
 -- Service Providers (for Module 3.2 - Nearby Providers)
 CREATE TABLE service_providers (
@@ -145,9 +170,12 @@ CREATE TABLE urgent_work_items (
     urgency_level VARCHAR(50), -- 'critical', 'high', 'medium'
     estimated_cost DECIMAL(10, 2),
     recommended_package_id INT REFERENCES service_packages(package_id),
+    discount_percentage DECIMAL(5, 2) DEFAULT 0.00 CHECK (discount_percentage >= 0 AND discount_percentage <= 100),
     is_resolved BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+COMMENT ON COLUMN urgent_work_items.discount_percentage IS 'Discount percentage applied by provider (0-100). Price comes from recommended_package.base_price';
 
 CREATE INDEX idx_urgent_items_inspection ON urgent_work_items(inspection_id);
 
@@ -256,6 +284,20 @@ CREATE TABLE booking_urgent_items (
     urgent_item_id INT REFERENCES urgent_work_items(urgent_item_id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Booking Customizations (Track customizations made to bundle bookings)
+CREATE TABLE booking_customizations (
+    customization_id SERIAL PRIMARY KEY,
+    booking_id INT NOT NULL REFERENCES bookings(booking_id) ON DELETE CASCADE,
+    removed_package_id INT REFERENCES service_packages(package_id),
+    added_package_id INT REFERENCES service_packages(package_id),
+    price_adjustment DECIMAL(10, 2) DEFAULT 0.00,
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_booking_customizations ON booking_customizations(booking_id);
+
+COMMENT ON TABLE booking_customizations IS 'Tracks user customizations to bundle packages (add/remove services)';
 
 -- COVID/Restriction Checks (Module 3.3)
 CREATE TABLE restriction_checks (
@@ -508,8 +550,98 @@ $$ LANGUAGE plpgsql;
 -- Example: SELECT cron.schedule('cleanup-expired-data', '0 2 * * *', 'SELECT cleanup_expired_data()');
 
 -- ============================================================================
+-- BUNDLE HELPER FUNCTIONS
+-- ============================================================================
+
+-- Calculate actual bundle price after customization
+CREATE OR REPLACE FUNCTION calculate_customized_bundle_price(
+    p_bundle_package_id INT,
+    p_removed_package_ids INT[],
+    p_added_package_ids INT[]
+) RETURNS DECIMAL(10, 2) AS $$
+DECLARE
+    v_base_price DECIMAL(10, 2);
+    v_removed_cost DECIMAL(10, 2) := 0;
+    v_added_cost DECIMAL(10, 2) := 0;
+BEGIN
+    -- Get bundle base price
+    SELECT base_price INTO v_base_price
+    FROM service_packages
+    WHERE package_id = p_bundle_package_id;
+
+    -- Calculate cost of removed services
+    IF p_removed_package_ids IS NOT NULL THEN
+        SELECT COALESCE(SUM(base_price), 0) INTO v_removed_cost
+        FROM service_packages
+        WHERE package_id = ANY(p_removed_package_ids);
+    END IF;
+
+    -- Calculate cost of added services
+    IF p_added_package_ids IS NOT NULL THEN
+        SELECT COALESCE(SUM(base_price), 0) INTO v_added_cost
+        FROM service_packages
+        WHERE package_id = ANY(p_added_package_ids);
+    END IF;
+
+    -- Return adjusted price
+    RETURN v_base_price - v_removed_cost + v_added_cost;
+END;
+$$ LANGUAGE plpgsql;
+
+COMMENT ON FUNCTION calculate_customized_bundle_price IS 'Calculate bundle price after user adds/removes services';
+
+-- ============================================================================
 -- VIEWS: Useful aggregations
 -- ============================================================================
+
+-- View: Bundle package details with included services and pricing
+CREATE OR REPLACE VIEW bundle_package_details AS
+SELECT
+    sp.package_id,
+    sp.package_name,
+    sp.description,
+    sp.package_type,
+    sp.base_price as bundle_price,
+    sp.discount_percentage,
+    sp.is_customizable,
+    sp.duration_minutes as total_duration,
+    sp.category_id,
+    sc.category_name,
+    COALESCE(
+        (SELECT json_agg(
+            json_build_object(
+                'package_id', included.package_id,
+                'package_name', included.package_name,
+                'description', included.description,
+                'base_price', included.base_price,
+                'duration_minutes', included.duration_minutes,
+                'is_optional', bi.is_optional,
+                'display_order', bi.display_order
+            ) ORDER BY bi.display_order
+        )
+        FROM bundle_items bi
+        JOIN service_packages included ON bi.included_package_id = included.package_id
+        WHERE bi.bundle_package_id = sp.package_id
+        ), '[]'::json
+    ) as included_services,
+    (
+        SELECT COALESCE(SUM(included.base_price), 0)
+        FROM bundle_items bi
+        JOIN service_packages included ON bi.included_package_id = included.package_id
+        WHERE bi.bundle_package_id = sp.package_id
+    ) as original_total_price,
+    (
+        SELECT COALESCE(SUM(included.duration_minutes), 0)
+        FROM bundle_items bi
+        JOIN service_packages included ON bi.included_package_id = included.package_id
+        WHERE bi.bundle_package_id = sp.package_id
+    ) as calculated_total_duration
+FROM service_packages sp
+JOIN service_categories sc ON sp.category_id = sc.category_id
+WHERE sp.package_type = 'bundle'
+    AND sp.is_active = TRUE;
+
+COMMENT ON VIEW bundle_package_details IS 'Complete bundle information with included services and pricing';
 
 -- View: Active bookings with user and provider details
 CREATE OR REPLACE VIEW active_bookings_view AS
@@ -622,6 +754,27 @@ INSERT INTO service_packages (category_id, package_name, description, base_price
     (2, 'Electrical Safety Check', 'Full electrical safety inspection', 200.00, 90, TRUE),
     (3, 'AC Maintenance', 'Air conditioning service and maintenance', 180.00, 90, FALSE);
 
+-- Insert Home Inspection package
+INSERT INTO service_packages (
+    category_id,
+    package_name,
+    description,
+    base_price,
+    duration_minutes,
+    package_type,
+    requires_inspection,
+    is_active
+) VALUES (
+    4,
+    'Special General Service (Home Inspection)',
+    'Comprehensive home inspection service covering safety, water, power, HVAC, and visible structure. Inspector will assess your property and provide a detailed urgent work list with prioritized recommendations.',
+    150.00,
+    180,
+    'single',
+    FALSE,
+    TRUE
+);
+
 
 
 -- Convert them into service providers with Adelaide-area locations
@@ -659,31 +812,145 @@ VALUES
 (3, 'Heating System Tune-up', 'Full service for heating units', 260.00, 120, TRUE),
 (4, 'Furniture Assembly', 'Assembling and installation of furniture', 150.00, 60, FALSE);
 
+-- ============================================================================
+-- BUNDLE PACKAGES
+-- ============================================================================
+
+-- Create bundle packages with discounts
+INSERT INTO service_packages (
+    category_id,
+    package_name,
+    description,
+    base_price,
+    duration_minutes,
+    package_type,
+    discount_percentage,
+    is_customizable,
+    is_active
+) VALUES
+    -- Home Safety Bundle
+    (4,
+     'Complete Home Safety Bundle',
+     'Comprehensive safety inspection including plumbing, electrical, and HVAC checks. Save 25% compared to booking separately!',
+     450.00,
+     270,
+     'bundle',
+     25.00,
+     TRUE,
+     TRUE),
+
+    -- Emergency Response Bundle
+    (4,
+     'Emergency Response Package',
+     'Fast-track emergency services bundle for urgent plumbing and electrical issues. Available 24/7.',
+     650.00,
+     180,
+     'bundle',
+     15.00,
+     FALSE,
+     TRUE),
+
+    -- Seasonal Maintenance Bundle
+    (3,
+     'Seasonal Home Maintenance',
+     'Prepare your home for the season with HVAC tune-up, filter changes, and system optimization.',
+     380.00,
+     210,
+     'bundle',
+     20.00,
+     TRUE,
+     TRUE),
+
+    -- New Home Setup Bundle
+    (4,
+     'New Home Setup Bundle',
+     'Everything you need for a new home: inspections, installations, and furniture assembly.',
+     750.00,
+     360,
+     'bundle',
+     18.00,
+     TRUE,
+     TRUE);
+
+-- Link services to bundles
+-- Complete Home Safety Bundle (package_id 12)
+INSERT INTO bundle_items (bundle_package_id, included_package_id, is_optional, display_order)
+VALUES
+    (12, 1, FALSE, 1),  -- Basic Plumbing Inspection (required)
+    (12, 3, FALSE, 2),  -- Electrical Safety Check (required)
+    (12, 4, TRUE, 3);   -- AC Maintenance (optional)
+
+-- Emergency Response Bundle (package_id 13)
+INSERT INTO bundle_items (bundle_package_id, included_package_id, is_optional, display_order)
+VALUES
+    (13, 2, FALSE, 1),  -- Emergency Leak Repair (required)
+    (13, 3, FALSE, 2);  -- Electrical Safety Check (required)
+
+-- Seasonal Maintenance Bundle (package_id 14)
+INSERT INTO bundle_items (bundle_package_id, included_package_id, is_optional, display_order)
+VALUES
+    (14, 4, FALSE, 1),  -- AC Maintenance (required)
+    (14, 9, TRUE, 2),   -- AC Gas Refill (optional)
+    (14, 10, FALSE, 3); -- Heating System Tune-up (required)
+
+-- New Home Setup Bundle (package_id 15)
+INSERT INTO bundle_items (bundle_package_id, included_package_id, is_optional, display_order)
+VALUES
+    (15, 1, FALSE, 1),   -- Basic Plumbing Inspection
+    (15, 3, FALSE, 2),   -- Electrical Safety Check
+    (15, 6, TRUE, 3),    -- Full Home Maintenance (optional)
+    (15, 11, TRUE, 4);   -- Furniture Assembly (optional)
+
 -- Link providers to service packages (provider_services)
 -- Provider 1 (PlumberPro) offers plumbing services
 -- Provider 2 (ElectroFix) offers electrical services
 -- Provider 3 (HVAC Expert) offers HVAC services
--- Provider 4 (CleanHome) offers general services
--- Provider 5 (Quick Maintenance) offers general maintenance
+-- Provider 4 (CleanHome) offers general services + FULL SERVICE for bundles
+-- Provider 5 (Quick Maintenance) offers general maintenance + FULL SERVICE for bundles
 INSERT INTO provider_services (provider_id, package_id, is_available)
 VALUES
 -- Provider 1: Plumbing packages
 (1, 1, TRUE),  -- Basic Plumbing Inspection
 (1, 2, TRUE),  -- Emergency Leak Repair
-(1, 6, TRUE),  -- Pipe Replacement Service
+(1, 7, TRUE),  -- Pipe Replacement Service
 -- Provider 2: Electrical packages
 (2, 3, TRUE),  -- Electrical Safety Check
-(2, 7, TRUE),  -- Lighting Installation
+(2, 8, TRUE),  -- Lighting Installation
 -- Provider 3: HVAC packages
 (3, 4, TRUE),  -- AC Maintenance
-(3, 8, TRUE),  -- AC Gas Refill
-(3, 9, TRUE),  -- Heating System Tune-up
--- Provider 4: General services
-(4, 5, TRUE),  -- Full Home Maintenance
-(4, 10, TRUE), -- Furniture Assembly
--- Provider 5: General maintenance
-(5, 5, TRUE),  -- Full Home Maintenance
-(5, 10, TRUE); -- Furniture Assembly
+(3, 9, TRUE),  -- AC Gas Refill
+(3, 10, TRUE), -- Heating System Tune-up
+-- Provider 4: Full-service provider (can handle bundles)
+(4, 1, TRUE),  -- Basic Plumbing Inspection
+(4, 2, TRUE),  -- Emergency Leak Repair
+(4, 3, TRUE),  -- Electrical Safety Check
+(4, 4, TRUE),  -- AC Maintenance
+(4, 6, TRUE),  -- Full Home Maintenance
+(4, 7, TRUE),  -- Pipe Replacement Service
+(4, 8, TRUE),  -- Lighting Installation
+(4, 9, TRUE),  -- AC Gas Refill
+(4, 10, TRUE), -- Heating System Tune-up
+(4, 11, TRUE), -- Furniture Assembly
+-- Provider 5: Full-service provider (can handle bundles)
+(5, 1, TRUE),  -- Basic Plumbing Inspection
+(5, 2, TRUE),  -- Emergency Leak Repair
+(5, 3, TRUE),  -- Electrical Safety Check
+(5, 4, TRUE),  -- AC Maintenance
+(5, 6, TRUE),  -- Full Home Maintenance
+(5, 9, TRUE),  -- AC Gas Refill
+(5, 10, TRUE), -- Heating System Tune-up
+(5, 11, TRUE); -- Furniture Assembly
+
+-- Update provider descriptions to reflect their expanded capabilities
+UPDATE service_providers
+SET description = 'Full-service home services provider offering plumbing, electrical, HVAC, and general maintenance. Perfect for bundle packages and comprehensive home care.'
+WHERE provider_id = 4;
+
+UPDATE service_providers
+SET description = 'Comprehensive home services provider with expertise in all areas: plumbing, electrical, HVAC, and general maintenance. Ideal for complete home solutions.'
+WHERE provider_id = 5;
+
+COMMENT ON TABLE provider_services IS 'Links providers to services they can deliver. Providers 4 and 5 are full-service and can handle bundle packages.';
 
 -- Fake bookings
 INSERT INTO bookings (user_id, package_id, provider_id, booking_type, booking_status, scheduled_date, service_address, special_instructions)
