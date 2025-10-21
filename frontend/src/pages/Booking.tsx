@@ -68,6 +68,10 @@ export default function Booking() {
     null
   );
 
+  // Get inspection context from URL
+  const inspectionId = searchParams.get("inspection_id");
+  const urgentItemId = searchParams.get("urgent_item_id");
+
   // Fetch service packages and providers on mount
   useEffect(() => {
     const loadData = async () => {
@@ -131,11 +135,13 @@ export default function Booking() {
       const bookingData = {
         package_id: selectedPackage!.package_id,
         ...(selectedProvider && { provider_id: selectedProvider.provider_id }),
-        booking_type: "non-urgent",
+        booking_type: inspectionId ? "inspection-based" : "non-urgent",
         start_date: scheduledDate!.format("YYYY-MM-DD"),
         start_time: selectedStartTime!,
         service_address: serviceAddress,
         special_instructions: specialInstructions || null,
+        ...(inspectionId && { inspection_id: parseInt(inspectionId) }),
+        ...(urgentItemId && { urgent_item_id: parseInt(urgentItemId) }),
       };
 
       const response = await bookingApi.createBooking(bookingData);
@@ -180,6 +186,19 @@ export default function Booking() {
           Fast, reliable, and professional services at your doorstep
         </Typography>
       </Box>
+
+      {/* Inspection Context Alert */}
+      {inspectionId && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2">
+            Booking from Inspection #{inspectionId}
+          </Typography>
+          <Typography variant="body2">
+            This booking is linked to your inspection and will mark the related
+            work item as resolved when completed.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Stepper */}
       <Card sx={{ mb: 4, overflow: "visible" }}>

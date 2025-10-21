@@ -43,6 +43,7 @@ export interface BundlePackage {
   included_services: BundleIncludedService[];
   original_total_price: number;
   package_type?: string;
+  matching_services?: number; // Number of work item packages this bundle covers
 }
 
 export interface ServiceProvider {
@@ -62,6 +63,8 @@ export interface BookingData {
   start_time: string; // HH:MM (must be on 30-min boundary)
   service_address: string;
   special_instructions?: string | null;
+  inspection_id?: number; // Link to inspection if this booking is for inspection-based work
+  urgent_item_id?: number; // Link to specific work item if applicable
   // Note: end_date is NOT sent - backend calculates it automatically based on service duration
 }
 
@@ -107,6 +110,55 @@ export interface ConfirmationDetails {
   payment_date: string;
   scheduled_date: string | null;
   service_address: string | null;
+}
+
+export interface Inspection {
+  inspection_id: number;
+  user_id: string;
+  provider_id?: number;
+  provider_name?: string;
+  inspection_date: string;
+  inspection_status: "scheduled" | "completed" | "cancelled";
+  inspection_notes?: string;
+  inspector_name?: string;
+  created_at: string;
+  updated_at?: string;
+  work_items_count?: number;
+  critical_count?: number;
+  high_count?: number;
+  medium_count?: number;
+}
+
+export interface UrgentWorkItem {
+  urgent_item_id: number;
+  inspection_id: number;
+  item_description: string;
+  urgency_level: "critical" | "high" | "medium";
+  discount_percentage: number;
+  recommended_package_id?: number;
+  recommended_package?: ServicePackage;
+  is_resolved: boolean;
+  created_at: string;
+}
+
+export interface InspectionDetails extends Inspection {
+  work_items: UrgentWorkItem[];
+  recommended_bundles: BundlePackage[];
+}
+
+export interface InspectionBookingData {
+  user_id: string;
+  inspection_date: string; // ISO format: YYYY-MM-DDTHH:MM
+  service_address: string;
+  notes?: string;
+  provider_id?: number;
+}
+
+export interface WorkItemData {
+  item_description: string;
+  urgency_level: "critical" | "high" | "medium";
+  discount_percentage?: number;
+  recommended_package_id?: number;
 }
 
 // Demo data - Expanded with more diverse services
@@ -546,6 +598,94 @@ export const availabilityApi = {
     }
     const response = await api.get<AvailabilityResponse>(
       `/availability/slots?${params}`
+    );
+    return response.data;
+  },
+};
+
+// Inspection API
+export const inspectionApi = {
+  // Book a new inspection
+  createInspection: async (
+    data: InspectionBookingData
+  ): Promise<Inspection> => {
+    const response = await api.post<Inspection>("/inspections", data);
+    return response.data;
+  },
+
+  // Get list of inspections for a user or provider
+  getInspections: async (
+    userId?: string,
+    providerId?: number
+  ): Promise<Inspection[]> => {
+    const params = new URLSearchParams();
+    if (userId) params.append("user_id", userId);
+    if (providerId) params.append("provider_id", providerId.toString());
+
+    const response = await api.get<Inspection[]>(
+      `/inspections?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  // Get detailed inspection with work items and bundle recommendations
+  getInspectionDetails: async (
+    inspectionId: number
+  ): Promise<InspectionDetails> => {
+    const response = await api.get<InspectionDetails>(
+      `/inspections/${inspectionId}`
+    );
+    return response.data;
+  },
+
+  // Update inspection (mark complete, add notes, etc.)
+  updateInspection: async (
+    inspectionId: number,
+    data: Partial<{
+      inspection_status: "scheduled" | "completed" | "cancelled";
+      inspection_notes: string;
+      inspector_name: string;
+    }>
+  ): Promise<Inspection> => {
+    const response = await api.put<Inspection>(
+      `/inspections/${inspectionId}`,
+      data
+    );
+    return response.data;
+  },
+
+  // Create a work item for an inspection
+  createWorkItem: async (
+    inspectionId: number,
+    data: WorkItemData
+  ): Promise<UrgentWorkItem> => {
+    const response = await api.post<UrgentWorkItem>(
+      `/inspections/${inspectionId}/work-items`,
+      data
+    );
+    return response.data;
+  },
+
+  // Update a work item
+  updateWorkItem: async (
+    inspectionId: number,
+    itemId: number,
+    data: Partial<WorkItemData>
+  ): Promise<UrgentWorkItem> => {
+    const response = await api.put<UrgentWorkItem>(
+      `/inspections/${inspectionId}/work-items/${itemId}`,
+      data
+    );
+    return response.data;
+  },
+
+  // Delete a work item
+  deleteWorkItem: async (
+    inspectionId: number,
+    itemId: number
+  ): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(
+      `/inspections/${inspectionId}/work-items/${itemId}`
     );
     return response.data;
   },

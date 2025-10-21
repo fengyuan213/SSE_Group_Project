@@ -815,6 +815,27 @@ def create_booking():
                         (booking_id, provider_id, slot_date, slot_time, "booked"),
                     )
 
+                # SECURITY: Link booking to work item if this is inspection-based
+                # This is crucial for applying provider-set discounts at payment time
+                if data.get("urgent_item_id"):
+                    cur.execute(
+                        """
+                        INSERT INTO booking_urgent_items (booking_id, urgent_item_id)
+                        VALUES (%s, %s)
+                        """,
+                        (booking_id, data["urgent_item_id"]),
+                    )
+
+                    # Also mark the work item as resolved (being addressed by this booking)
+                    cur.execute(
+                        """
+                        UPDATE urgent_work_items
+                        SET is_resolved = TRUE
+                        WHERE urgent_item_id = %s
+                        """,
+                        (data["urgent_item_id"],),
+                    )
+
                 return (
                     jsonify(
                         {
@@ -904,7 +925,8 @@ def create_payment_intent():
                         b.booking_id,
                         b.booking_status,
                         sp.base_price,
-                        b.user_id
+                        b.user_id,
+                        sp.package_type
                     FROM bookings b
                     JOIN service_packages sp ON b.package_id = sp.package_id
                     WHERE b.booking_id = %s
@@ -937,8 +959,30 @@ def create_payment_intent():
                 if existing_payment:
                     return jsonify({"error": "Booking has already been paid"}), 400
 
-                # Use the REAL price from database
-                amount = float(booking["base_price"])
+                # SECURITY: Calculate final price including discounts from work items
+                base_price = float(booking["base_price"])
+
+                # Check if this booking is linked to work items with discounts
+                cur.execute(
+                    """
+                    SELECT uwi.discount_percentage
+                    FROM booking_urgent_items bui
+                    JOIN urgent_work_items uwi ON bui.urgent_item_id = uwi.urgent_item_id
+                    WHERE bui.booking_id = %s
+                    LIMIT 1
+                    """,
+                    (booking_id,),
+                )
+
+                work_item = cur.fetchone()
+
+                if work_item and work_item["discount_percentage"]:
+                    # Apply provider-set discount
+                    discount = float(work_item["discount_percentage"])
+                    amount = base_price * (1 - discount / 100)
+                else:
+                    # No discount, use base price
+                    amount = base_price
 
         # Convert to cents/pence for Stripe
         amount_cents = int(amount * 100)
@@ -1257,6 +1301,560 @@ def get_confirmation_details(payment_reference):
                     result["scheduled_date"] = result["scheduled_date"].isoformat()
 
                 return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# INSPECTION ENDPOINTS
+# ============================================================================
+
+
+@api_bp.post("/inspections")
+def create_inspection():
+    """Book a new home inspection"""
+    try:
+        data = request.get_json()
+
+        # Required fields
+        required_fields = ["user_id", "inspection_date", "service_address"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Parse inspection date
+        inspection_date = datetime.strptime(data["inspection_date"], "%Y-%m-%dT%H:%M")
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Optional: Auto-assign available provider
+                provider_id = data.get("provider_id")
+                if not provider_id:
+                    # Find an available provider (simple first-available logic)
+                    cur.execute(
+                        """
+                        SELECT provider_id
+                        FROM service_providers
+                        WHERE is_active = TRUE
+                        LIMIT 1
+                        """
+                    )
+                    provider_result = cur.fetchone()
+                    if provider_result:
+                        provider_id = provider_result["provider_id"]
+
+                # Create inspection record
+                cur.execute(
+                    """
+                    INSERT INTO inspection_visits (
+                        user_id,
+                        provider_id,
+                        inspection_date,
+                        inspection_status,
+                        inspection_notes
+                    )
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING inspection_id, inspection_date, inspection_status
+                    """,
+                    (
+                        data["user_id"],
+                        provider_id,
+                        inspection_date,
+                        "scheduled",
+                        data.get("notes", ""),
+                    ),
+                )
+
+                result = cur.fetchone()
+                conn.commit()
+
+                # Convert to dict
+                inspection = dict(result)
+                if inspection.get("inspection_date"):
+                    inspection["inspection_date"] = inspection[
+                        "inspection_date"
+                    ].isoformat()
+
+                return jsonify(inspection), 201
+
+    except Exception as e:
+        import traceback
+
+        print(f"Error creating inspection: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.get("/inspections")
+def get_inspections():
+    """Get list of inspections filtered by user_id or provider_id"""
+    try:
+        user_id = request.args.get("user_id")
+        provider_id = request.args.get("provider_id")
+
+        if not user_id and not provider_id:
+            return jsonify({"error": "user_id or provider_id required"}), 400
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                query = """
+                    SELECT
+                        iv.inspection_id,
+                        iv.user_id,
+                        iv.provider_id,
+                        iv.inspection_date,
+                        iv.inspection_status,
+                        iv.inspection_notes,
+                        iv.inspector_name,
+                        iv.created_at,
+                        sp.business_name as provider_name,
+                        COUNT(uwi.urgent_item_id) as work_items_count,
+                        COUNT(CASE WHEN uwi.urgency_level = 'critical' THEN 1 END) as critical_count,
+                        COUNT(CASE WHEN uwi.urgency_level = 'high' THEN 1 END) as high_count,
+                        COUNT(CASE WHEN uwi.urgency_level = 'medium' THEN 1 END) as medium_count
+                    FROM inspection_visits iv
+                    LEFT JOIN service_providers sp ON iv.provider_id = sp.provider_id
+                    LEFT JOIN urgent_work_items uwi ON iv.inspection_id = uwi.inspection_id
+                """
+
+                if user_id:
+                    query += " WHERE iv.user_id = %s"
+                    params = (user_id,)
+                else:
+                    query += " WHERE iv.provider_id = %s"
+                    params = (provider_id,)
+
+                query += """
+                    GROUP BY iv.inspection_id, sp.business_name
+                    ORDER BY iv.inspection_date DESC
+                """
+
+                cur.execute(query, params)
+                inspections = cur.fetchall()
+
+                # Convert to list of dicts
+                result = []
+                for inspection in inspections:
+                    insp_dict = dict(inspection)
+                    if insp_dict.get("inspection_date"):
+                        insp_dict["inspection_date"] = insp_dict[
+                            "inspection_date"
+                        ].isoformat()
+                    if insp_dict.get("created_at"):
+                        insp_dict["created_at"] = insp_dict["created_at"].isoformat()
+                    result.append(insp_dict)
+
+                return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.get("/inspections/<int:inspection_id>")
+def get_inspection_details(inspection_id):
+    """Get detailed inspection with all work items and bundle recommendations"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Get inspection details
+                cur.execute(
+                    """
+                    SELECT
+                        iv.inspection_id,
+                        iv.user_id,
+                        iv.provider_id,
+                        iv.inspection_date,
+                        iv.inspection_status,
+                        iv.inspection_notes,
+                        iv.inspector_name,
+                        iv.created_at,
+                        iv.updated_at,
+                        sp.business_name as provider_name
+                    FROM inspection_visits iv
+                    LEFT JOIN service_providers sp ON iv.provider_id = sp.provider_id
+                    WHERE iv.inspection_id = %s
+                    """,
+                    (inspection_id,),
+                )
+
+                inspection = cur.fetchone()
+                if not inspection:
+                    return jsonify({"error": "Inspection not found"}), 404
+
+                inspection_dict = dict(inspection)
+
+                # Convert dates
+                if inspection_dict.get("inspection_date"):
+                    inspection_dict["inspection_date"] = inspection_dict[
+                        "inspection_date"
+                    ].isoformat()
+                if inspection_dict.get("created_at"):
+                    inspection_dict["created_at"] = inspection_dict[
+                        "created_at"
+                    ].isoformat()
+                if inspection_dict.get("updated_at"):
+                    inspection_dict["updated_at"] = inspection_dict[
+                        "updated_at"
+                    ].isoformat()
+
+                # Get work items with recommended packages
+                cur.execute(
+                    """
+                    SELECT
+                        uwi.urgent_item_id,
+                        uwi.inspection_id,
+                        uwi.item_description,
+                        uwi.urgency_level,
+                        uwi.discount_percentage,
+                        uwi.recommended_package_id,
+                        uwi.is_resolved,
+                        uwi.created_at,
+                        sp.package_name,
+                        sp.description as package_description,
+                        sp.base_price,
+                        sp.duration_minutes,
+                        sc.category_name
+                    FROM urgent_work_items uwi
+                    LEFT JOIN service_packages sp ON uwi.recommended_package_id = sp.package_id
+                    LEFT JOIN service_categories sc ON sp.category_id = sc.category_id
+                    WHERE uwi.inspection_id = %s
+                    ORDER BY
+                        CASE uwi.urgency_level
+                            WHEN 'critical' THEN 1
+                            WHEN 'high' THEN 2
+                            WHEN 'medium' THEN 3
+                            ELSE 4
+                        END,
+                        uwi.created_at
+                    """,
+                    (inspection_id,),
+                )
+
+                work_items = cur.fetchall()
+                work_items_list = []
+                recommended_package_ids = []
+
+                for item in work_items:
+                    item_dict = dict(item)
+                    if item_dict.get("discount_percentage") is not None:
+                        item_dict["discount_percentage"] = float(
+                            item_dict["discount_percentage"]
+                        )
+                    if item_dict.get("base_price"):
+                        item_dict["base_price"] = float(item_dict["base_price"])
+                    if item_dict.get("created_at"):
+                        item_dict["created_at"] = item_dict["created_at"].isoformat()
+
+                    # Build recommended_package object
+                    if item_dict.get("recommended_package_id"):
+                        recommended_package_ids.append(
+                            item_dict["recommended_package_id"]
+                        )
+                        item_dict["recommended_package"] = {
+                            "package_id": item_dict["recommended_package_id"],
+                            "package_name": item_dict.get("package_name"),
+                            "description": item_dict.get("package_description"),
+                            "base_price": item_dict.get("base_price"),
+                            "duration_minutes": item_dict.get("duration_minutes"),
+                            "category_name": item_dict.get("category_name"),
+                        }
+
+                    # Remove redundant fields
+                    for key in [
+                        "package_name",
+                        "package_description",
+                        "base_price",
+                        "duration_minutes",
+                        "category_name",
+                    ]:
+                        item_dict.pop(key, None)
+
+                    work_items_list.append(item_dict)
+
+                inspection_dict["work_items"] = work_items_list
+
+                # Find potential bundle recommendations
+                # Look for bundles that include multiple recommended packages
+                recommended_bundles = []
+                if len(recommended_package_ids) >= 2:
+                    # Convert to tuple for SQL IN clause
+                    package_ids_tuple = tuple(set(recommended_package_ids))
+
+                    cur.execute(
+                        """
+                        SELECT
+                            sp.package_id,
+                            sp.package_name,
+                            sp.description,
+                            sp.base_price as bundle_price,
+                            sp.discount_percentage,
+                            COUNT(DISTINCT bi.included_package_id) as matching_services
+                        FROM service_packages sp
+                        JOIN bundle_items bi ON sp.package_id = bi.bundle_package_id
+                        WHERE sp.package_type = 'bundle'
+                        AND sp.is_active = TRUE
+                        AND bi.included_package_id IN %s
+                        GROUP BY sp.package_id
+                        HAVING COUNT(DISTINCT bi.included_package_id) >= 2
+                        ORDER BY matching_services DESC
+                        LIMIT 3
+                        """,
+                        (package_ids_tuple,),
+                    )
+
+                    bundles = cur.fetchall()
+                    for bundle in bundles:
+                        bundle_dict = dict(bundle)
+                        if bundle_dict.get("bundle_price"):
+                            bundle_dict["bundle_price"] = float(
+                                bundle_dict["bundle_price"]
+                            )
+                        if bundle_dict.get("discount_percentage"):
+                            bundle_dict["discount_percentage"] = float(
+                                bundle_dict["discount_percentage"]
+                            )
+                        recommended_bundles.append(bundle_dict)
+
+                inspection_dict["recommended_bundles"] = recommended_bundles
+
+                return jsonify(inspection_dict)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.put("/inspections/<int:inspection_id>")
+def update_inspection(inspection_id):
+    """Update inspection (e.g., mark complete, add notes)"""
+    try:
+        data = request.get_json()
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Build dynamic update query
+                update_fields = []
+                params = []
+
+                if "inspection_status" in data:
+                    update_fields.append("inspection_status = %s")
+                    params.append(data["inspection_status"])
+
+                if "inspection_notes" in data:
+                    update_fields.append("inspection_notes = %s")
+                    params.append(data["inspection_notes"])
+
+                if "inspector_name" in data:
+                    update_fields.append("inspector_name = %s")
+                    params.append(data["inspector_name"])
+
+                if not update_fields:
+                    return jsonify({"error": "No fields to update"}), 400
+
+                update_fields.append("updated_at = CURRENT_TIMESTAMP")
+                params.append(inspection_id)
+
+                query = f"""
+                    UPDATE inspection_visits
+                    SET {', '.join(update_fields)}
+                    WHERE inspection_id = %s
+                    RETURNING inspection_id, inspection_status, inspection_notes, inspector_name, updated_at
+                """
+
+                cur.execute(query, params)
+                result = cur.fetchone()
+
+                if not result:
+                    return jsonify({"error": "Inspection not found"}), 404
+
+                conn.commit()
+
+                # Convert to dict
+                inspection = dict(result)
+                if inspection.get("updated_at"):
+                    inspection["updated_at"] = inspection["updated_at"].isoformat()
+
+                return jsonify(inspection)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.post("/inspections/<int:inspection_id>/work-items")
+def create_work_item(inspection_id):
+    """Provider creates a new urgent work item for an inspection"""
+    try:
+        data = request.get_json()
+
+        # Required fields - estimated_cost is no longer required, we use package price
+        required_fields = [
+            "item_description",
+            "urgency_level",
+            "recommended_package_id",
+        ]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Validate urgency level
+        if data["urgency_level"] not in ["critical", "high", "medium"]:
+            return (
+                jsonify(
+                    {"error": "urgency_level must be 'critical', 'high', or 'medium'"}
+                ),
+                400,
+            )
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Verify inspection exists
+                cur.execute(
+                    "SELECT inspection_id FROM inspection_visits WHERE inspection_id = %s",
+                    (inspection_id,),
+                )
+                if not cur.fetchone():
+                    return jsonify({"error": "Inspection not found"}), 404
+
+                # Create work item with optional discount
+                cur.execute(
+                    """
+                    INSERT INTO urgent_work_items (
+                        inspection_id,
+                        item_description,
+                        urgency_level,
+                        discount_percentage,
+                        recommended_package_id,
+                        is_resolved
+                    )
+                    VALUES (%s, %s, %s, %s, %s, FALSE)
+                    RETURNING urgent_item_id, inspection_id, item_description,
+                              urgency_level, discount_percentage, recommended_package_id,
+                              is_resolved, created_at
+                    """,
+                    (
+                        inspection_id,
+                        data["item_description"],
+                        data["urgency_level"],
+                        data.get("discount_percentage", 0),
+                        data["recommended_package_id"],
+                    ),
+                )
+
+                result = cur.fetchone()
+                conn.commit()
+
+                # Convert to dict
+                work_item = dict(result)
+                if work_item.get("discount_percentage"):
+                    work_item["discount_percentage"] = float(
+                        work_item["discount_percentage"]
+                    )
+                if work_item.get("created_at"):
+                    work_item["created_at"] = work_item["created_at"].isoformat()
+
+                return jsonify(work_item), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.put("/inspections/<int:inspection_id>/work-items/<int:item_id>")
+def update_work_item(inspection_id, item_id):
+    """Provider updates an existing work item"""
+    try:
+        data = request.get_json()
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Build dynamic update query
+                update_fields = []
+                params = []
+
+                if "item_description" in data:
+                    update_fields.append("item_description = %s")
+                    params.append(data["item_description"])
+
+                if "urgency_level" in data:
+                    if data["urgency_level"] not in ["critical", "high", "medium"]:
+                        return (
+                            jsonify(
+                                {
+                                    "error": "urgency_level must be 'critical', 'high', or 'medium'"
+                                }
+                            ),
+                            400,
+                        )
+                    update_fields.append("urgency_level = %s")
+                    params.append(data["urgency_level"])
+
+                if "discount_percentage" in data:
+                    update_fields.append("discount_percentage = %s")
+                    params.append(data["discount_percentage"])
+
+                if "recommended_package_id" in data:
+                    update_fields.append("recommended_package_id = %s")
+                    params.append(data["recommended_package_id"])
+
+                if not update_fields:
+                    return jsonify({"error": "No fields to update"}), 400
+
+                params.extend([inspection_id, item_id])
+
+                query = f"""
+                    UPDATE urgent_work_items
+                    SET {', '.join(update_fields)}
+                    WHERE inspection_id = %s AND urgent_item_id = %s
+                    RETURNING urgent_item_id, inspection_id, item_description,
+                              urgency_level, discount_percentage, recommended_package_id,
+                              is_resolved, created_at
+                """
+
+                cur.execute(query, params)
+                result = cur.fetchone()
+
+                if not result:
+                    return jsonify({"error": "Work item not found"}), 404
+
+                conn.commit()
+
+                # Convert to dict
+                work_item = dict(result)
+                if work_item.get("discount_percentage"):
+                    work_item["discount_percentage"] = float(
+                        work_item["discount_percentage"]
+                    )
+                if work_item.get("created_at"):
+                    work_item["created_at"] = work_item["created_at"].isoformat()
+
+                return jsonify(work_item)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.delete("/inspections/<int:inspection_id>/work-items/<int:item_id>")
+def delete_work_item(inspection_id, item_id):
+    """Provider deletes a work item (if added by mistake)"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    DELETE FROM urgent_work_items
+                    WHERE inspection_id = %s AND urgent_item_id = %s
+                    RETURNING urgent_item_id
+                    """,
+                    (inspection_id, item_id),
+                )
+
+                result = cur.fetchone()
+
+                if not result:
+                    return jsonify({"error": "Work item not found"}), 404
+
+                conn.commit()
+
+                return jsonify({"message": "Work item deleted successfully"}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

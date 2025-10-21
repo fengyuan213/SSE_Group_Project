@@ -16,6 +16,10 @@ import Confirmation from "./pages/Confirmation.tsx";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ROUTES } from "./lib/routes";
 import Dashboard from "./pages/Dashboard.tsx";
+import InspectionBooking from "./pages/InspectionBooking";
+import Inspections from "./pages/Inspections";
+import InspectionDetails from "./pages/InspectionDetails";
+import ProviderDashboard from "./pages/ProviderDashboard";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -47,7 +51,24 @@ export default function App() {
             Home
           </Button>
           <Button color="inherit" component={Link} to={ROUTES.BOOKING_GENERAL}>
-            General Booking
+            Book Service
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            to={ROUTES.BOOKING_INSPECTION}
+          >
+            Book Inspection
+          </Button>
+          <Button color="inherit" component={Link} to={ROUTES.INSPECTIONS}>
+            My Inspections
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            to={ROUTES.PROVIDER_DASHBOARD}
+          >
+            Provider
           </Button>
           <Box sx={{ ml: 2 }}>
             <Chip
@@ -71,6 +92,16 @@ export default function App() {
           <Routes>
             <Route path={ROUTES.HOME} element={<Dashboard />} />
             <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
+            <Route
+              path={ROUTES.BOOKING_INSPECTION}
+              element={<InspectionBooking />}
+            />
+            <Route path={ROUTES.INSPECTIONS} element={<Inspections />} />
+            <Route path="/inspections/:id" element={<InspectionDetails />} />
+            <Route
+              path={ROUTES.PROVIDER_DASHBOARD}
+              element={<ProviderDashboard />}
+            />
             <Route path={ROUTES.PAYMENT} element={<Payment />} />
             <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />

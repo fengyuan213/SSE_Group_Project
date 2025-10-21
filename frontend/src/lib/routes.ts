@@ -8,8 +8,12 @@
 export const ROUTES = {
   HOME: "/",
   BOOKING_GENERAL: "/booking/general",
+  BOOKING_INSPECTION: "/booking/inspection",
   PAYMENT: "/payment",
   CONFIRMATION: "/confirmation",
+  INSPECTIONS: "/inspections",
+  INSPECTION_DETAILS: "/inspections/:id",
+  PROVIDER_DASHBOARD: "/provider",
 } as const;
 
 /**
@@ -42,4 +46,8 @@ export const getPaymentReferenceFromUrl = (
   searchParams: URLSearchParams
 ): string | null => {
   return searchParams.get("payment_reference");
+};
+
+export const buildInspectionDetailsRoute = (inspectionId: number) => {
+  return `/inspections/${inspectionId}`;
 };
