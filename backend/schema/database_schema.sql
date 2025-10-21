@@ -624,7 +624,8 @@ INSERT INTO service_packages (category_id, package_name, description, base_price
 
 
 
--- Convert them into service providers
+-- Convert them into service providers with Adelaide-area locations
+-- All providers located around Adelaide for testing nearby search
 INSERT INTO service_providers (
     user_id, business_name, description, latitude, longitude, address,
     service_radius_km, is_verified, average_rating
@@ -633,11 +634,11 @@ SELECT user_id, business_name, description, latitude, longitude, address,
        radius, verified, rating
 FROM (
   VALUES
-  ((SELECT id FROM users WHERE email='plumber.pro@example.com'), 'PlumberPro Ltd', 'Expert plumbing and emergency repairs', 51.5074, -0.1278, 'London, UK', 25, TRUE, 4.8),
-  ((SELECT id FROM users WHERE email='electro.fix@example.com'), 'ElectroFix Co.', 'Electrical installation and troubleshooting', 52.4862, -1.8904, 'Birmingham, UK', 30, TRUE, 4.5),
-  ((SELECT id FROM users WHERE email='hvac.expert@example.com'), 'HVAC Expert Solutions', 'Air conditioning and heating systems', 53.4808, -2.2426, 'Manchester, UK', 35, TRUE, 4.7),
-  ((SELECT id FROM users WHERE email='clean.home@example.com'), 'CleanHome Services', 'Home deep cleaning and sanitation', 51.4545, -2.5879, 'Bristol, UK', 20, TRUE, 4.6),
-  ((SELECT id FROM users WHERE email='quick.maint@example.com'), 'Quick Maintenance', 'General repairs and maintenance', 55.9533, -3.1883, 'Edinburgh, UK', 40, TRUE, 4.9)
+  ((SELECT id FROM users WHERE email='plumber.pro@example.com'), 'PlumberPro Ltd', 'Expert plumbing and emergency repairs', -34.9285, 138.6007, 'Adelaide CBD, SA 5000', 25, TRUE, 4.8),
+  ((SELECT id FROM users WHERE email='electro.fix@example.com'), 'ElectroFix Co.', 'Electrical installation and troubleshooting', -34.9058, 138.5965, 'North Adelaide, SA 5006', 30, TRUE, 4.5),
+  ((SELECT id FROM users WHERE email='hvac.expert@example.com'), 'HVAC Expert Solutions', 'Air conditioning and heating systems', -34.9797, 138.5141, 'Glenelg, SA 5045', 35, TRUE, 4.7),
+  ((SELECT id FROM users WHERE email='clean.home@example.com'), 'CleanHome Services', 'Home deep cleaning and sanitation', -34.9190, 138.6289, 'Norwood, SA 5067', 20, TRUE, 4.6),
+  ((SELECT id FROM users WHERE email='quick.maint@example.com'), 'Quick Maintenance', 'General repairs and maintenance', -34.9201, 138.4972, 'Henley Beach, SA 5022', 40, TRUE, 4.9)
 ) AS data(user_id, business_name, description, latitude, longitude, address, radius, verified, rating);
 
 -- Update providers with working hours and capacity

@@ -20,6 +20,7 @@ import InspectionBooking from "./pages/InspectionBooking";
 import Inspections from "./pages/Inspections";
 import InspectionDetails from "./pages/InspectionDetails";
 import ProviderDashboard from "./pages/ProviderDashboard";
+import NearbyServices from "./pages/NearbyServices";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -49,6 +50,9 @@ export default function App() {
           </Typography>
           <Button color="inherit" component={Link} to={ROUTES.HOME}>
             Home
+          </Button>
+          <Button color="inherit" component={Link} to={ROUTES.NEARBY_SERVICES}>
+            Find Nearby
           </Button>
           <Button color="inherit" component={Link} to={ROUTES.BOOKING_GENERAL}>
             Book Service
@@ -91,6 +95,7 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path={ROUTES.HOME} element={<Dashboard />} />
+            <Route path={ROUTES.NEARBY_SERVICES} element={<NearbyServices />} />
             <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
             <Route
               path={ROUTES.BOOKING_INSPECTION}

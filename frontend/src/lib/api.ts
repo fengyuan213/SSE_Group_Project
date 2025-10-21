@@ -55,6 +55,46 @@ export interface ServiceProvider {
   is_verified: boolean;
 }
 
+export interface NearbyProvider {
+  provider_id: number;
+  business_name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  average_rating: number;
+  is_verified: boolean;
+  service_count: number;
+  services: string[]; // Array of service package names
+  covid_restrictions: CovidRestriction[];
+}
+
+export interface CovidRestriction {
+  area: string;
+  restriction: "Low" | "Medium" | "High";
+  distance_km?: number;
+}
+
+export interface NearbyProvidersResponse {
+  providers: NearbyProvider[];
+  count: number;
+  search_center: { latitude: number; longitude: number };
+  radius_km: number;
+}
+
+export interface CovidRestrictionsResponse {
+  restrictions: CovidRestriction[];
+  count: number;
+  location: { latitude: number; longitude: number };
+}
+
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  postcode?: string;
+}
+
 export interface BookingData {
   package_id: number;
   provider_id?: number;
@@ -686,6 +726,45 @@ export const inspectionApi = {
   ): Promise<{ message: string }> => {
     const response = await api.delete<{ message: string }>(
       `/inspections/${inspectionId}/work-items/${itemId}`
+    );
+    return response.data;
+  },
+};
+
+// Nearby Providers & Location API
+export const locationApi = {
+  // Search for nearby providers
+  searchNearbyProviders: async (
+    latitude: number,
+    longitude: number,
+    radius?: number,
+    categoryId?: number
+  ): Promise<NearbyProvidersResponse> => {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+    if (radius) params.append("radius", radius.toString());
+    if (categoryId) params.append("service_category_id", categoryId.toString());
+
+    const response = await api.get<NearbyProvidersResponse>(
+      `/nearby-providers?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  // Get COVID restrictions for a location
+  getCovidRestrictions: async (
+    latitude: number,
+    longitude: number
+  ): Promise<CovidRestrictionsResponse> => {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+
+    const response = await api.get<CovidRestrictionsResponse>(
+      `/covid-restrictions?${params.toString()}`
     );
     return response.data;
   },

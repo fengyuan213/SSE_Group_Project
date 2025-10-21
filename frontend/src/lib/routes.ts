@@ -14,6 +14,7 @@ export const ROUTES = {
   INSPECTIONS: "/inspections",
   INSPECTION_DETAILS: "/inspections/:id",
   PROVIDER_DASHBOARD: "/provider",
+  NEARBY_SERVICES: "/nearby-services",
 } as const;
 
 /**

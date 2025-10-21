@@ -12,6 +12,48 @@ from .email_service import (
     send_payment_confirmation_email,
 )
 
+# ============================================================================
+# MOCK COVID RESTRICTION DATA (for demo purposes)
+# All zones centered around Adelaide area for testing
+# ============================================================================
+MOCK_COVID_RESTRICTIONS = [
+    {
+        "area": "Adelaide CBD",
+        "restriction": "Medium",
+        "latitude": -34.9285,
+        "longitude": 138.6007,
+        "radius_km": 5,
+    },
+    {
+        "area": "North Adelaide",
+        "restriction": "Low",
+        "latitude": -34.9058,
+        "longitude": 138.5965,
+        "radius_km": 3,
+    },
+    {
+        "area": "Glenelg Beach Area",
+        "restriction": "Low",
+        "latitude": -34.9797,
+        "longitude": 138.5141,
+        "radius_km": 4,
+    },
+    {
+        "area": "Eastern Suburbs",
+        "restriction": "High",
+        "latitude": -34.9190,
+        "longitude": 138.6289,
+        "radius_km": 6,
+    },
+    {
+        "area": "Port Adelaide",
+        "restriction": "Medium",
+        "latitude": -34.8470,
+        "longitude": 138.5042,
+        "radius_km": 8,
+    },
+]
+
 # Initialize Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "sk_test_mock_key")
 
@@ -23,6 +65,41 @@ def decimal_to_float(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     raise TypeError
+
+
+# ============================================================================
+# GEOLOCATION HELPER FUNCTIONS
+# ============================================================================
+
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    """
+    Calculate the great-circle distance between two points on Earth.
+    Uses the Haversine formula.
+
+    Args:
+        lat1, lon1: Latitude and longitude of point 1 (in degrees)
+        lat2, lon2: Latitude and longitude of point 2 (in degrees)
+
+    Returns:
+        Distance in kilometers
+    """
+    R = 6371  # Earth's radius in kilometers
+
+    # Convert to radians
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+
+    # Haversine formula
+    a = (
+        math.sin(delta_phi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return R * c
 
 
 # ============================================================================
@@ -1855,6 +1932,205 @@ def delete_work_item(inspection_id, item_id):
                 conn.commit()
 
                 return jsonify({"message": "Work item deleted successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# NEARBY PROVIDERS & COVID RESTRICTIONS ENDPOINTS
+# ============================================================================
+
+
+@api_bp.route("/nearby-providers", methods=["GET"])
+def get_nearby_providers():
+    """
+    Find service providers near a given location.
+    Query params:
+    - latitude: required (user's latitude)
+    - longitude: required (user's longitude)
+    - radius: optional (search radius in km, default 30)
+    - service_category_id: optional (filter by service category)
+    """
+    try:
+        # Validate required parameters
+        latitude = request.args.get("latitude", type=float)
+        longitude = request.args.get("longitude", type=float)
+        radius = request.args.get("radius", type=float, default=30.0)
+        category_id = request.args.get("service_category_id", type=int)
+
+        if latitude is None or longitude is None:
+            return jsonify({"error": "latitude and longitude are required"}), 400
+
+        # Validate latitude and longitude ranges
+        if not (-90 <= latitude <= 90):
+            return jsonify({"error": "Invalid latitude (must be -90 to 90)"}), 400
+        if not (-180 <= longitude <= 180):
+            return jsonify({"error": "Invalid longitude (must be -180 to 180)"}), 400
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Get all active providers with their services
+                query = """
+                    SELECT
+                        sp.provider_id,
+                        sp.business_name,
+                        sp.description,
+                        sp.address,
+                        sp.latitude,
+                        sp.longitude,
+                        sp.average_rating,
+                        sp.is_verified,
+                        sp.service_radius_km,
+                        COALESCE(
+                            array_agg(DISTINCT pkg.package_name) FILTER (WHERE pkg.package_name IS NOT NULL),
+                            ARRAY[]::text[]
+                        ) as services
+                    FROM service_providers sp
+                    LEFT JOIN provider_services ps ON sp.provider_id = ps.provider_id AND ps.is_available = TRUE
+                    LEFT JOIN service_packages pkg ON ps.package_id = pkg.package_id AND pkg.is_active = TRUE
+                    WHERE sp.is_active = TRUE
+                    AND sp.latitude IS NOT NULL
+                    AND sp.longitude IS NOT NULL
+                """
+
+                params = []
+
+                # Optional category filter
+                if category_id:
+                    query += """
+                        AND EXISTS (
+                            SELECT 1 FROM provider_services ps2
+                            JOIN service_packages pkg2 ON ps2.package_id = pkg2.package_id
+                            WHERE ps2.provider_id = sp.provider_id
+                            AND pkg2.category_id = %s
+                            AND ps2.is_available = TRUE
+                        )
+                    """
+                    params.append(category_id)
+
+                # Add GROUP BY for aggregation
+                query += """
+                    GROUP BY sp.provider_id, sp.business_name, sp.description,
+                             sp.address, sp.latitude, sp.longitude,
+                             sp.average_rating, sp.is_verified, sp.service_radius_km
+                """
+
+                cur.execute(query, params)
+                providers = cur.fetchall()
+
+                # Calculate distances and filter by radius
+                nearby_providers = []
+                for provider in providers:
+                    provider_dict = dict(provider)
+
+                    # Calculate distance using Haversine formula
+                    distance = haversine_distance(
+                        latitude,
+                        longitude,
+                        float(provider_dict["latitude"]),
+                        float(provider_dict["longitude"]),
+                    )
+
+                    # Filter by radius
+                    if distance <= radius:
+                        provider_dict["distance_km"] = round(distance, 2)
+                        provider_dict["service_count"] = len(provider_dict["services"])
+
+                        # Convert Decimal to float
+                        if provider_dict.get("average_rating"):
+                            provider_dict["average_rating"] = float(
+                                provider_dict["average_rating"]
+                            )
+                        if provider_dict.get("service_radius_km"):
+                            provider_dict["service_radius_km"] = float(
+                                provider_dict["service_radius_km"]
+                            )
+                        if provider_dict.get("latitude"):
+                            provider_dict["latitude"] = float(provider_dict["latitude"])
+                        if provider_dict.get("longitude"):
+                            provider_dict["longitude"] = float(
+                                provider_dict["longitude"]
+                            )
+
+                        # Check if provider is in a COVID restriction zone
+                        provider_restrictions = []
+                        for zone in MOCK_COVID_RESTRICTIONS:
+                            zone_distance = haversine_distance(
+                                float(provider_dict["latitude"]),
+                                float(provider_dict["longitude"]),
+                                zone["latitude"],
+                                zone["longitude"],
+                            )
+                            if zone_distance <= zone["radius_km"]:
+                                provider_restrictions.append(
+                                    {
+                                        "area": zone["area"],
+                                        "restriction": zone["restriction"],
+                                    }
+                                )
+
+                        provider_dict["covid_restrictions"] = provider_restrictions
+
+                        nearby_providers.append(provider_dict)
+
+                # Sort by distance (nearest first)
+                nearby_providers.sort(key=lambda x: x["distance_km"])
+
+                return jsonify(
+                    {
+                        "providers": nearby_providers,
+                        "count": len(nearby_providers),
+                        "search_center": {"latitude": latitude, "longitude": longitude},
+                        "radius_km": radius,
+                    }
+                )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/covid-restrictions", methods=["GET"])
+def get_covid_restrictions():
+    """
+    Get COVID restriction zones affecting a given location.
+    Query params:
+    - latitude: required (user's latitude)
+    - longitude: required (user's longitude)
+    """
+    try:
+        latitude = request.args.get("latitude", type=float)
+        longitude = request.args.get("longitude", type=float)
+
+        if latitude is None or longitude is None:
+            return jsonify({"error": "latitude and longitude are required"}), 400
+
+        # Find restriction zones that overlap with user's location
+        affecting_zones = []
+        for zone in MOCK_COVID_RESTRICTIONS:
+            distance = haversine_distance(
+                latitude, longitude, zone["latitude"], zone["longitude"]
+            )
+
+            if distance <= zone["radius_km"]:
+                affecting_zones.append(
+                    {
+                        "area": zone["area"],
+                        "restriction": zone["restriction"],
+                        "distance_km": round(distance, 2),
+                    }
+                )
+
+        # Sort by distance
+        affecting_zones.sort(key=lambda x: x["distance_km"])
+
+        return jsonify(
+            {
+                "restrictions": affecting_zones,
+                "count": len(affecting_zones),
+                "location": {"latitude": latitude, "longitude": longitude},
+            }
+        )
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
