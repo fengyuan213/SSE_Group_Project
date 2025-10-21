@@ -1,0 +1,834 @@
+{
+  "items": [
+    {
+      "id": "0001",
+      "ts": "2025-09-15T09:00:00Z",
+      "user": "auth0|user_001",
+      "action": "auth.login",
+      "target": "web_portal",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.189",
+      "requestId": "req-10001",
+      "method": "POST",
+      "path": "/api/login",
+      "details": {
+        "method": "password"
+      }
+    },
+    {
+      "id": "0048",
+      "ts": "2025-09-15T17:11:38Z",
+      "user": "auth0|provider_021",
+      "action": "auth.mfa.verify",
+      "target": "mfa",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.124",
+      "requestId": "req-10048",
+      "method": "POST",
+      "path": "/api/mfa/verify",
+      "details": {}
+    },
+    {
+      "id": "0017",
+      "ts": "2025-09-16T13:23:58Z",
+      "user": "auth0|user_002",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "198.51.100.69",
+      "requestId": "req-10017",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0044",
+      "ts": "2025-09-17T15:06:50Z",
+      "user": "auth0|admin_002",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "192.0.2.87",
+      "requestId": "req-10044",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results",
+        "status": 403,
+        "reason": "Forbidden"
+      }
+    },
+    {
+      "id": "0032",
+      "ts": "2025-09-17T19:29:15Z",
+      "user": "auth0|admin_002",
+      "action": "booking.create",
+      "target": "BK-20250917-089815",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.125",
+      "requestId": "req-10032",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0018",
+      "ts": "2025-09-18T05:06:55Z",
+      "user": "auth0|user_002",
+      "action": "booking.create",
+      "target": "BK-20250918-222956",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.128",
+      "requestId": "req-10018",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0033",
+      "ts": "2025-09-18T08:38:18Z",
+      "user": "auth0|provider_007",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "203.0.113.169",
+      "requestId": "req-10033",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0047",
+      "ts": "2025-09-18T15:49:47Z",
+      "user": "auth0|admin_002",
+      "action": "payment.refund",
+      "target": "BK-20250918-053046",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.139",
+      "requestId": "req-10047",
+      "method": "POST",
+      "path": "/api/payments/refund",
+      "details": {
+        "amount": 25
+      }
+    },
+    {
+      "id": "0007",
+      "ts": "2025-09-19T12:03:24Z",
+      "user": "auth0|admin_002",
+      "action": "payment.initiate",
+      "target": "BK-20250919-376418",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.155",
+      "requestId": "req-10007",
+      "method": "POST",
+      "path": "/api/payments",
+      "details": {
+        "amount": 129,
+        "currency": "AUD",
+        "gateway": "stripe"
+      }
+    },
+    {
+      "id": "0003",
+      "ts": "2025-09-19T13:09:46Z",
+      "user": "auth0|provider_021",
+      "action": "booking.create",
+      "target": "BK-20250919-529904",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.7",
+      "requestId": "req-10003",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0043",
+      "ts": "2025-09-19T16:55:57Z",
+      "user": "auth0|user_003",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "198.51.100.120",
+      "requestId": "req-10043",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results",
+        "status": 403,
+        "reason": "Forbidden"
+      }
+    },
+    {
+      "id": "0002",
+      "ts": "2025-09-19T23:24:55Z",
+      "user": "auth0|admin_002",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "203.0.113.8",
+      "requestId": "req-10002",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results",
+        "status": 403,
+        "reason": "Forbidden"
+      }
+    },
+    {
+      "id": "0045",
+      "ts": "2025-09-20T07:18:27Z",
+      "user": "auth0|provider_021",
+      "action": "booking.create",
+      "target": "BK-20250920-199449",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.115",
+      "requestId": "req-10045",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0031",
+      "ts": "2025-09-20T10:20:07Z",
+      "user": "auth0|user_002",
+      "action": "roles.update",
+      "target": "user",
+      "status": "SUCCESS",
+      "sensitivity": "sensitive",
+      "ip": "198.51.100.62",
+      "requestId": "req-10031",
+      "method": "POST",
+      "path": "/api/admin/roles",
+      "details": {
+        "add": ["provider"]
+      }
+    },
+    {
+      "id": "0026",
+      "ts": "2025-09-20T13:27:44Z",
+      "user": "auth0|user_001",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.29",
+      "requestId": "req-10026",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results"
+      }
+    },
+    {
+      "id": "0037",
+      "ts": "2025-09-20T20:58:48Z",
+      "user": "auth0|provider_021",
+      "action": "booking.create",
+      "target": "BK-20250920-067137",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.6",
+      "requestId": "req-10037",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0020",
+      "ts": "2025-09-21T18:40:52Z",
+      "user": "auth0|user_001",
+      "action": "booking.create",
+      "target": "BK-20250921-783301",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.110",
+      "requestId": "req-10020",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0046",
+      "ts": "2025-09-21T19:19:27Z",
+      "user": "auth0|provider_007",
+      "action": "payment.initiate",
+      "target": "BK-20250921-292076",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.64",
+      "requestId": "req-10046",
+      "method": "POST",
+      "path": "/api/payments",
+      "details": {
+        "amount": 129,
+        "currency": "AUD",
+        "gateway": "stripe"
+      }
+    },
+    {
+      "id": "0023",
+      "ts": "2025-09-22T18:23:33Z",
+      "user": "auth0|user_003",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "192.0.2.17",
+      "requestId": "req-10023",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0030",
+      "ts": "2025-09-22T20:13:05Z",
+      "user": "auth0|admin_001",
+      "action": "data.export",
+      "target": "bookings",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.5",
+      "requestId": "req-10030",
+      "method": "GET",
+      "path": "/api/export/bookings",
+      "details": {
+        "format": "csv"
+      }
+    },
+    {
+      "id": "0015",
+      "ts": "2025-09-23T07:23:27Z",
+      "user": "auth0|provider_021",
+      "action": "data.export",
+      "target": "bookings",
+      "status": "WARN",
+      "sensitivity": "normal",
+      "ip": "198.51.100.70",
+      "requestId": "req-10015",
+      "method": "GET",
+      "path": "/api/export/bookings",
+      "details": {
+        "format": "csv"
+      }
+    },
+    {
+      "id": "0035",
+      "ts": "2025-09-25T06:45:46Z",
+      "user": "auth0|provider_021",
+      "action": "roles.update",
+      "target": "user",
+      "status": "SUCCESS",
+      "sensitivity": "sensitive",
+      "ip": "192.0.2.80",
+      "requestId": "req-10035",
+      "method": "POST",
+      "path": "/api/admin/roles",
+      "details": {
+        "add": ["provider"]
+      }
+    },
+    {
+      "id": "0049",
+      "ts": "2025-09-25T09:02:01Z",
+      "user": "auth0|user_003",
+      "action": "consent.accept",
+      "target": "privacy_policy",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.43",
+      "requestId": "req-10049",
+      "method": "POST",
+      "path": "/api/consent",
+      "details": {
+        "policyVersion": "v1.3",
+        "method": "checkbox"
+      }
+    },
+    {
+      "id": "0011",
+      "ts": "2025-09-26T01:31:14Z",
+      "user": "auth0|user_001",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "203.0.113.219",
+      "requestId": "req-10011",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0012",
+      "ts": "2025-09-26T07:13:15Z",
+      "user": "auth0|admin_002",
+      "action": "consent.accept",
+      "target": "privacy_policy",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.72",
+      "requestId": "req-10012",
+      "method": "POST",
+      "path": "/api/consent",
+      "details": {
+        "policyVersion": "v1.3",
+        "method": "checkbox"
+      }
+    },
+    {
+      "id": "0028",
+      "ts": "2025-09-27T18:52:13Z",
+      "user": "auth0|provider_007",
+      "action": "data.export",
+      "target": "bookings",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.223",
+      "requestId": "req-10028",
+      "method": "GET",
+      "path": "/api/export/bookings",
+      "details": {
+        "format": "csv"
+      }
+    },
+    {
+      "id": "0008",
+      "ts": "2025-09-27T20:11:20Z",
+      "user": "auth0|admin_001",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "192.0.2.118",
+      "requestId": "req-10008",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0014",
+      "ts": "2025-09-27T23:03:06Z",
+      "user": "auth0|admin_002",
+      "action": "security.csrf.block",
+      "target": "/api/appointments",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "192.0.2.163",
+      "requestId": "req-10014",
+      "method": "POST",
+      "path": "/api/appointments",
+      "details": {
+        "reason": "missing csrf token"
+      }
+    },
+    {
+      "id": "0005",
+      "ts": "2025-09-28T12:06:56Z",
+      "user": "auth0|admin_001",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "203.0.113.179",
+      "requestId": "req-10005",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0027",
+      "ts": "2025-09-29T05:57:08Z",
+      "user": "auth0|provider_007",
+      "action": "payment.initiate",
+      "target": "BK-20250929-475764",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.245",
+      "requestId": "req-10027",
+      "method": "POST",
+      "path": "/api/payments",
+      "details": {
+        "amount": 129,
+        "currency": "AUD",
+        "gateway": "stripe"
+      }
+    },
+    {
+      "id": "0040",
+      "ts": "2025-10-01T00:58:37Z",
+      "user": "auth0|provider_021",
+      "action": "auth.mfa.verify",
+      "target": "mfa",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.55",
+      "requestId": "req-10040",
+      "method": "POST",
+      "path": "/api/mfa/verify",
+      "details": {}
+    },
+    {
+      "id": "0010",
+      "ts": "2025-10-02T13:20:07Z",
+      "user": "auth0|provider_021",
+      "action": "result.view.click",
+      "target": "appointments",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.170",
+      "requestId": "req-10010",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "from": "home",
+        "note": "clicked View Result button"
+      }
+    },
+    {
+      "id": "0024",
+      "ts": "2025-10-03T16:17:11Z",
+      "user": "system",
+      "action": "payment.initiate",
+      "target": "BK-20251003-554817",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.249",
+      "requestId": "req-10024",
+      "method": "POST",
+      "path": "/api/payments",
+      "details": {
+        "amount": 129,
+        "currency": "AUD",
+        "gateway": "stripe"
+      }
+    },
+    {
+      "id": "0019",
+      "ts": "2025-10-04T04:56:40Z",
+      "user": "system",
+      "action": "roles.update",
+      "target": "user",
+      "status": "SUCCESS",
+      "sensitivity": "sensitive",
+      "ip": "203.0.113.68",
+      "requestId": "req-10019",
+      "method": "POST",
+      "path": "/api/admin/roles",
+      "details": {
+        "add": ["provider"]
+      }
+    },
+    {
+      "id": "0036",
+      "ts": "2025-10-04T08:51:34Z",
+      "user": "auth0|user_002",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "192.0.2.116",
+      "requestId": "req-10036",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results",
+        "status": 403,
+        "reason": "Forbidden"
+      }
+    },
+    {
+      "id": "0006",
+      "ts": "2025-10-05T12:22:53Z",
+      "user": "auth0|user_001",
+      "action": "provider.response",
+      "target": "BK-20251005-163033",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.27",
+      "requestId": "req-10006",
+      "method": "POST",
+      "path": "/api/provider/response",
+      "details": {
+        "response": "accept"
+      }
+    },
+    {
+      "id": "0013",
+      "ts": "2025-10-07T00:15:40Z",
+      "user": "auth0|user_002",
+      "action": "api.request",
+      "target": "/api/results/",
+      "status": "DENY",
+      "sensitivity": "sensitive",
+      "ip": "198.51.100.54",
+      "requestId": "req-10013",
+      "method": "GET",
+      "path": "/api/results/",
+      "details": {
+        "note": "view results",
+        "status": 403,
+        "reason": "Forbidden"
+      }
+    },
+    {
+      "id": "0042",
+      "ts": "2025-10-07T23:03:12Z",
+      "user": "auth0|user_003",
+      "action": "rate_limit.hit",
+      "target": "ip",
+      "status": "DENY",
+      "sensitivity": "normal",
+      "ip": "203.0.113.25",
+      "requestId": "req-10042",
+      "method": "GET",
+      "path": "/api/health",
+      "details": {
+        "rule": "ip-20rpm",
+        "windowSec": 60
+      }
+    },
+    {
+      "id": "0034",
+      "ts": "2025-10-08T01:44:38Z",
+      "user": "auth0|provider_007",
+      "action": "data.export",
+      "target": "bookings",
+      "status": "WARN",
+      "sensitivity": "normal",
+      "ip": "192.0.2.109",
+      "requestId": "req-10034",
+      "method": "GET",
+      "path": "/api/export/bookings",
+      "details": {
+        "format": "csv"
+      }
+    },
+    {
+      "id": "0022",
+      "ts": "2025-10-08T22:59:15Z",
+      "user": "auth0|admin_001",
+      "action": "auth.mfa.verify",
+      "target": "mfa",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.161",
+      "requestId": "req-10022",
+      "method": "POST",
+      "path": "/api/mfa/verify",
+      "details": {}
+    },
+    {
+      "id": "0009",
+      "ts": "2025-10-11T00:45:03Z",
+      "user": "auth0|user_003",
+      "action": "auth.mfa.verify",
+      "target": "mfa",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.159",
+      "requestId": "req-10009",
+      "method": "POST",
+      "path": "/api/mfa/verify",
+      "details": {
+        "result": "failure"
+      }
+    },
+    {
+      "id": "0041",
+      "ts": "2025-10-11T04:15:11Z",
+      "user": "system",
+      "action": "user.update",
+      "target": "profile",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.201",
+      "requestId": "req-10041",
+      "method": "PUT",
+      "path": "/api/users/profile",
+      "details": {
+        "fields": ["name", "phone"]
+      }
+    },
+    {
+      "id": "0025",
+      "ts": "2025-10-11T20:33:17Z",
+      "user": "auth0|admin_001",
+      "action": "consent.accept",
+      "target": "privacy_policy",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "192.0.2.185",
+      "requestId": "req-10025",
+      "method": "POST",
+      "path": "/api/consent",
+      "details": {
+        "policyVersion": "v1.3",
+        "method": "checkbox"
+      }
+    },
+    {
+      "id": "0016",
+      "ts": "2025-10-12T00:53:36Z",
+      "user": "auth0|user_002",
+      "action": "booking.create",
+      "target": "BK-20251012-883795",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.59",
+      "requestId": "req-10016",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0004",
+      "ts": "2025-10-12T05:53:52Z",
+      "user": "auth0|user_003",
+      "action": "booking.create",
+      "target": "BK-20251012-231149",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.151",
+      "requestId": "req-10004",
+      "method": "POST",
+      "path": "/api/bookings",
+      "details": {
+        "slot": "TBD"
+      }
+    },
+    {
+      "id": "0021",
+      "ts": "2025-10-13T07:51:54Z",
+      "user": "auth0|user_002",
+      "action": "payment.initiate",
+      "target": "BK-20251013-229975",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.131",
+      "requestId": "req-10021",
+      "method": "POST",
+      "path": "/api/payments",
+      "details": {
+        "amount": 129,
+        "currency": "AUD",
+        "gateway": "stripe"
+      }
+    },
+    {
+      "id": "0038",
+      "ts": "2025-10-13T13:25:45Z",
+      "user": "auth0|provider_021",
+      "action": "data.export",
+      "target": "bookings",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.19",
+      "requestId": "req-10038",
+      "method": "GET",
+      "path": "/api/export/bookings",
+      "details": {
+        "format": "csv"
+      }
+    },
+    {
+      "id": "0029",
+      "ts": "2025-10-15T08:31:39Z",
+      "user": "auth0|provider_021",
+      "action": "booking.update",
+      "target": "BK-20251015-160264",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.196",
+      "requestId": "req-10029",
+      "method": "PATCH",
+      "path": "/api/bookings/BK-20251015-160264",
+      "details": {
+        "fields": ["time", "note"]
+      }
+    },
+    {
+      "id": "0039",
+      "ts": "2025-10-15T13:25:45Z",
+      "user": "auth0|provider_021",
+      "action": "auth.login",
+      "target": "web_portal",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "203.0.113.221",
+      "requestId": "req-10039",
+      "method": "POST",
+      "path": "/api/login",
+      "details": {
+        "method": "oauth"
+      }
+    },
+    {
+      "id": "0050",
+      "ts": "2025-10-15T16:30:00Z",
+      "user": "auth0|user_003",
+      "action": "auth.login",
+      "target": "web_portal",
+      "status": "SUCCESS",
+      "sensitivity": "normal",
+      "ip": "198.51.100.74",
+      "requestId": "req-10050",
+      "method": "POST",
+      "path": "/api/login",
+      "details": {
+        "method": "password"
+      }
+    }
+  ],
+  "meta": {
+    "schema": "audit.v1",
+    "source": "fixtures",
+    "generatedAt": "2025-10-21T00:00:00Z"
+  }
+}
