@@ -133,7 +133,7 @@ def health():
 
 @api_bp.get("/packages")
 def get_packages():
-    """Get all active service packages."""
+    """Get all active service packages (both single and bundles)."""
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
@@ -145,12 +145,23 @@ def get_packages():
                         sp.description,
                         sp.base_price,
                         sp.duration_minutes,
+                        sp.package_type,
+                        sp.discount_percentage,
+                        sp.is_customizable,
                         sc.category_name,
-                        sc.category_id
+                        sc.category_id,
+                        CASE
+                            WHEN sp.package_type = 'bundle' THEN (
+                                SELECT COUNT(*)
+                                FROM bundle_items bi
+                                WHERE bi.bundle_package_id = sp.package_id
+                            )
+                            ELSE 0
+                        END as included_services_count
                     FROM service_packages sp
                     LEFT JOIN service_categories sc ON sp.category_id = sc.category_id
                     WHERE sp.is_active = TRUE
-                    ORDER BY sp.package_id
+                    ORDER BY sp.package_type DESC, sp.package_id
                 """
                 )
                 packages = cur.fetchall()
@@ -161,6 +172,10 @@ def get_packages():
                     pkg_dict = dict(pkg)
                     if pkg_dict.get("base_price"):
                         pkg_dict["base_price"] = float(pkg_dict["base_price"])
+                    if pkg_dict.get("discount_percentage"):
+                        pkg_dict["discount_percentage"] = float(
+                            pkg_dict["discount_percentage"]
+                        )
                     result.append(pkg_dict)
 
                 return jsonify(result)
@@ -205,6 +220,167 @@ def get_providers():
         return jsonify({"error": str(e)}), 500
 
 
+@api_bp.get("/packages/bundles")
+def get_bundle_packages():
+    """Get all active bundle packages with included services."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        sp.package_id,
+                        sp.package_name,
+                        sp.description,
+                        sp.base_price as bundle_price,
+                        sp.duration_minutes as total_duration,
+                        sp.discount_percentage,
+                        sp.is_customizable,
+                        sp.category_id,
+                        sc.category_name,
+                        COALESCE(
+                            (SELECT json_agg(
+                                json_build_object(
+                                    'package_id', included.package_id,
+                                    'package_name', included.package_name,
+                                    'description', included.description,
+                                    'base_price', included.base_price,
+                                    'duration_minutes', included.duration_minutes,
+                                    'is_optional', bi.is_optional,
+                                    'display_order', bi.display_order
+                                ) ORDER BY bi.display_order
+                            )
+                            FROM bundle_items bi
+                            JOIN service_packages included ON bi.included_package_id = included.package_id
+                            WHERE bi.bundle_package_id = sp.package_id
+                            ), '[]'::json
+                        ) as included_services,
+                        (
+                            SELECT COALESCE(SUM(included.base_price), 0)
+                            FROM bundle_items bi
+                            JOIN service_packages included ON bi.included_package_id = included.package_id
+                            WHERE bi.bundle_package_id = sp.package_id
+                        ) as original_total_price
+                    FROM service_packages sp
+                    JOIN service_categories sc ON sp.category_id = sc.category_id
+                    WHERE sp.package_type = 'bundle'
+                        AND sp.is_active = TRUE
+                    ORDER BY sp.package_id
+                    """
+                )
+                bundles = cur.fetchall()
+
+                # Convert Decimal to float for JSON serialization
+                result = []
+                for bundle in bundles:
+                    bundle_dict = dict(bundle)
+                    if bundle_dict.get("bundle_price"):
+                        bundle_dict["bundle_price"] = float(bundle_dict["bundle_price"])
+                    if bundle_dict.get("discount_percentage"):
+                        bundle_dict["discount_percentage"] = float(
+                            bundle_dict["discount_percentage"]
+                        )
+                    if bundle_dict.get("original_total_price"):
+                        bundle_dict["original_total_price"] = float(
+                            bundle_dict["original_total_price"]
+                        )
+                    # Convert included services prices to float
+                    if bundle_dict.get("included_services"):
+                        for service in bundle_dict["included_services"]:
+                            if service.get("base_price"):
+                                service["base_price"] = float(service["base_price"])
+                    result.append(bundle_dict)
+
+                return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.get("/packages/<int:package_id>/bundle-details")
+def get_bundle_details(package_id):
+    """Get detailed information about a specific bundle package."""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        sp.package_id,
+                        sp.package_name,
+                        sp.description,
+                        sp.package_type,
+                        sp.base_price as bundle_price,
+                        sp.duration_minutes,
+                        sp.discount_percentage,
+                        sp.is_customizable,
+                        sp.category_id,
+                        sc.category_name,
+                        COALESCE(
+                            (SELECT json_agg(
+                                json_build_object(
+                                    'package_id', included.package_id,
+                                    'package_name', included.package_name,
+                                    'description', included.description,
+                                    'base_price', included.base_price,
+                                    'duration_minutes', included.duration_minutes,
+                                    'category_name', inc_cat.category_name,
+                                    'is_optional', bi.is_optional,
+                                    'display_order', bi.display_order
+                                ) ORDER BY bi.display_order
+                            )
+                            FROM bundle_items bi
+                            JOIN service_packages included ON bi.included_package_id = included.package_id
+                            LEFT JOIN service_categories inc_cat ON included.category_id = inc_cat.category_id
+                            WHERE bi.bundle_package_id = sp.package_id
+                            ), '[]'::json
+                        ) as included_services,
+                        (
+                            SELECT COALESCE(SUM(included.base_price), 0)
+                            FROM bundle_items bi
+                            JOIN service_packages included ON bi.included_package_id = included.package_id
+                            WHERE bi.bundle_package_id = sp.package_id
+                        ) as original_total_price,
+                        (
+                            SELECT COALESCE(SUM(included.duration_minutes), 0)
+                            FROM bundle_items bi
+                            JOIN service_packages included ON bi.included_package_id = included.package_id
+                            WHERE bi.bundle_package_id = sp.package_id
+                        ) as total_duration
+                    FROM service_packages sp
+                    JOIN service_categories sc ON sp.category_id = sc.category_id
+                    WHERE sp.package_id = %s
+                        AND sp.is_active = TRUE
+                    """,
+                    (package_id,),
+                )
+                bundle = cur.fetchone()
+
+                if not bundle:
+                    return jsonify({"error": "Package not found"}), 404
+
+                # Convert Decimal to float
+                bundle_dict = dict(bundle)
+                if bundle_dict.get("bundle_price"):
+                    bundle_dict["bundle_price"] = float(bundle_dict["bundle_price"])
+                if bundle_dict.get("discount_percentage"):
+                    bundle_dict["discount_percentage"] = float(
+                        bundle_dict["discount_percentage"]
+                    )
+                if bundle_dict.get("original_total_price"):
+                    bundle_dict["original_total_price"] = float(
+                        bundle_dict["original_total_price"]
+                    )
+                # Convert included services prices
+                if bundle_dict.get("included_services"):
+                    for service in bundle_dict["included_services"]:
+                        if service.get("base_price"):
+                            service["base_price"] = float(service["base_price"])
+
+                return jsonify(bundle_dict)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ============================================================================
 # AVAILABILITY ENDPOINTS
 # ============================================================================
@@ -236,16 +412,33 @@ def get_available_slots():
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Get service duration
+                # Get service duration - for bundles, calculate from included services
                 cur.execute(
-                    "SELECT duration_minutes FROM service_packages WHERE package_id = %s",
+                    """
+                    SELECT
+                        sp.duration_minutes,
+                        sp.package_type,
+                        CASE
+                            WHEN sp.package_type = 'bundle' THEN
+                                COALESCE(
+                                    (SELECT SUM(included.duration_minutes)
+                                     FROM bundle_items bi
+                                     JOIN service_packages included ON bi.included_package_id = included.package_id
+                                     WHERE bi.bundle_package_id = sp.package_id),
+                                    sp.duration_minutes
+                                )
+                            ELSE sp.duration_minutes
+                        END as total_duration
+                    FROM service_packages sp
+                    WHERE sp.package_id = %s
+                    """,
                     (package_id,),
                 )
                 package = cur.fetchone()
                 if not package:
                     return jsonify({"error": "Package not found"}), 404
 
-                duration = package["duration_minutes"]
+                duration = package["total_duration"]
                 required_slots = calculate_required_slots(duration)
 
                 # Get providers to check
@@ -253,18 +446,65 @@ def get_available_slots():
                     provider_ids = [provider_id]
                 else:
                     # Find providers offering this service
-                    cur.execute(
-                        """
-                        SELECT DISTINCT ps.provider_id
-                        FROM provider_services ps
-                        JOIN service_providers sp ON ps.provider_id = sp.provider_id
-                        WHERE ps.package_id = %s
-                        AND ps.is_available = TRUE
-                        AND sp.is_active = TRUE
-                        """,
-                        (package_id,),
-                    )
+                    # For bundles, find providers who can offer ALL included services
+                    if package["package_type"] == "bundle":
+                        cur.execute(
+                            """
+                            SELECT provider_id
+                            FROM service_providers sp
+                            WHERE sp.is_active = TRUE
+                            AND NOT EXISTS (
+                                -- Check if there's any included service this provider doesn't offer
+                                SELECT 1
+                                FROM bundle_items bi
+                                WHERE bi.bundle_package_id = %s
+                                AND NOT EXISTS (
+                                    SELECT 1
+                                    FROM provider_services ps
+                                    WHERE ps.provider_id = sp.provider_id
+                                    AND ps.package_id = bi.included_package_id
+                                    AND ps.is_available = TRUE
+                                )
+                            )
+                            AND EXISTS (
+                                -- Make sure provider offers at least one included service
+                                SELECT 1
+                                FROM bundle_items bi
+                                JOIN provider_services ps ON ps.package_id = bi.included_package_id
+                                WHERE bi.bundle_package_id = %s
+                                AND ps.provider_id = sp.provider_id
+                                AND ps.is_available = TRUE
+                            )
+                            """,
+                            (package_id, package_id),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            SELECT DISTINCT ps.provider_id
+                            FROM provider_services ps
+                            JOIN service_providers sp ON ps.provider_id = sp.provider_id
+                            WHERE ps.package_id = %s
+                            AND ps.is_available = TRUE
+                            AND sp.is_active = TRUE
+                            """,
+                            (package_id,),
+                        )
                     provider_ids = [row["provider_id"] for row in cur.fetchall()]
+
+                # Check if any providers found
+                if not provider_ids:
+                    return jsonify(
+                        {
+                            "date": date_str,
+                            "available_slots": [],
+                            "required_slots": required_slots,
+                            "message": "No providers available for this service"
+                            + (
+                                " bundle" if package["package_type"] == "bundle" else ""
+                            ),
+                        }
+                    )
 
                 # Generate available slots respecting provider working hours
                 available_starts = []
@@ -371,36 +611,100 @@ def create_booking():
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                # Get service duration
+                # Get service duration - for bundles, calculate from included services
                 cur.execute(
-                    "SELECT duration_minutes FROM service_packages WHERE package_id = %s",
+                    """
+                    SELECT
+                        sp.duration_minutes,
+                        sp.package_type,
+                        sp.base_price,
+                        CASE
+                            WHEN sp.package_type = 'bundle' THEN
+                                COALESCE(
+                                    (SELECT SUM(included.duration_minutes)
+                                     FROM bundle_items bi
+                                     JOIN service_packages included ON bi.included_package_id = included.package_id
+                                     WHERE bi.bundle_package_id = sp.package_id),
+                                    sp.duration_minutes
+                                )
+                            ELSE sp.duration_minutes
+                        END as total_duration
+                    FROM service_packages sp
+                    WHERE sp.package_id = %s
+                    """,
                     (data["package_id"],),
                 )
                 package = cur.fetchone()
                 if not package:
                     return jsonify({"error": "Package not found"}), 404
 
-                required_slots = calculate_required_slots(package["duration_minutes"])
+                required_slots = calculate_required_slots(package["total_duration"])
 
                 # Determine provider
                 provider_id = data.get("provider_id")
                 if not provider_id:
-                    # Find available provider (simplified - take first available)
-                    cur.execute(
-                        """
-                        SELECT ps.provider_id
-                        FROM provider_services ps
-                        JOIN service_providers sp ON ps.provider_id = sp.provider_id
-                        WHERE ps.package_id = %s
-                        AND ps.is_available = TRUE
-                        AND sp.is_active = TRUE
-                        LIMIT 1
-                        """,
-                        (data["package_id"],),
-                    )
+                    # Find available provider
+                    # For bundles, find a provider who can offer ALL included services
+                    if package["package_type"] == "bundle":
+                        cur.execute(
+                            """
+                            SELECT provider_id
+                            FROM service_providers sp
+                            WHERE sp.is_active = TRUE
+                            AND NOT EXISTS (
+                                -- Check if there's any included service this provider doesn't offer
+                                SELECT 1
+                                FROM bundle_items bi
+                                WHERE bi.bundle_package_id = %s
+                                AND NOT EXISTS (
+                                    SELECT 1
+                                    FROM provider_services ps
+                                    WHERE ps.provider_id = sp.provider_id
+                                    AND ps.package_id = bi.included_package_id
+                                    AND ps.is_available = TRUE
+                                )
+                            )
+                            AND EXISTS (
+                                -- Make sure provider offers at least one included service
+                                SELECT 1
+                                FROM bundle_items bi
+                                JOIN provider_services ps ON ps.package_id = bi.included_package_id
+                                WHERE bi.bundle_package_id = %s
+                                AND ps.provider_id = sp.provider_id
+                                AND ps.is_available = TRUE
+                            )
+                            LIMIT 1
+                            """,
+                            (data["package_id"], data["package_id"]),
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            SELECT ps.provider_id
+                            FROM provider_services ps
+                            JOIN service_providers sp ON ps.provider_id = sp.provider_id
+                            WHERE ps.package_id = %s
+                            AND ps.is_available = TRUE
+                            AND sp.is_active = TRUE
+                            LIMIT 1
+                            """,
+                            (data["package_id"],),
+                        )
                     result = cur.fetchone()
                     if not result:
-                        return jsonify({"error": "No available providers"}), 404
+                        return (
+                            jsonify(
+                                {
+                                    "error": "No available providers for this "
+                                    + (
+                                        "bundle"
+                                        if package["package_type"] == "bundle"
+                                        else "service"
+                                    )
+                                }
+                            ),
+                            404,
+                        )
                     provider_id = result["provider_id"]
 
                 # Generate slots to book - automatically span multiple days if needed

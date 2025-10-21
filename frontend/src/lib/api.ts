@@ -13,6 +13,36 @@ export interface ServicePackage {
   duration_minutes: number;
   category_name: string;
   category_id: number;
+  package_type?: "single" | "bundle";
+  discount_percentage?: number;
+  is_customizable?: boolean;
+  included_services_count?: number;
+}
+
+export interface BundleIncludedService {
+  package_id: number;
+  package_name: string;
+  description: string;
+  base_price: number;
+  duration_minutes: number;
+  category_name?: string;
+  is_optional: boolean;
+  display_order: number;
+}
+
+export interface BundlePackage {
+  package_id: number;
+  package_name: string;
+  description: string;
+  bundle_price: number;
+  total_duration: number;
+  discount_percentage: number;
+  is_customizable: boolean;
+  category_id: number;
+  category_name: string;
+  included_services: BundleIncludedService[];
+  original_total_price: number;
+  package_type?: string;
 }
 
 export interface ServiceProvider {
@@ -378,7 +408,7 @@ const DEMO_PROVIDERS: ServiceProvider[] = [
 
 // API Functions
 export const bookingApi = {
-  // Get all service packages
+  // Get all service packages (single and bundles)
   getPackages: async (): Promise<ServicePackage[]> => {
     try {
       const response = await api.get<ServicePackage[]>("/packages");
@@ -387,6 +417,25 @@ export const bookingApi = {
       console.warn("API call failed, using demo data for packages", error);
       return DEMO_PACKAGES;
     }
+  },
+
+  // Get all bundle packages
+  getBundles: async (): Promise<BundlePackage[]> => {
+    try {
+      const response = await api.get<BundlePackage[]>("/packages/bundles");
+      return response.data;
+    } catch (error) {
+      console.warn("API call failed for bundles", error);
+      return [];
+    }
+  },
+
+  // Get bundle details by ID
+  getBundleDetails: async (packageId: number): Promise<BundlePackage> => {
+    const response = await api.get<BundlePackage>(
+      `/packages/${packageId}/bundle-details`
+    );
+    return response.data;
   },
 
   // Get all service providers
