@@ -130,7 +130,7 @@
   "portsAttributes": {
     "5173": {
       "label": "Frontend (Vite)",
-      "onAutoForward": "notify"
+      "onAutoForward": "openBrowser"
     },
     "5000": {
       "label": "Backend (Flask)",
@@ -160,9 +160,10 @@
   "containerEnv": {
     "NODE_ENV": "development",
     "PYTHONUNBUFFERED": "1",
-    // Git configuration (customize these for each user)
-    "GIT_USER_NAME": "${localEnv:GIT_USER_NAME:${localEnv:USER:vscode}}",
-    "GIT_USER_EMAIL": "${localEnv:GIT_USER_EMAIL:vscode@localhost}"
+    // Git configuration (customize these for each user) if it is ok to be undefined at this stage
+    "GIT_USER_NAME": "${localEnv:GIT_USER_NAME}",
+    "GIT_USER_EMAIL": "${localEnv:GIT_USER_EMAIL}",
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
   },
 
   // Features

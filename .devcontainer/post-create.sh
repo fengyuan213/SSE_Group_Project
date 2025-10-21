@@ -93,15 +93,7 @@ if [ -z "$GIT_USER_NAME" ]; then
         echo "⚠️  No Git identity found. Defaulting to vscode@localhost"
     fi
 fi
-# loading from .env environment variables
-# # Try .env file first (highest priority for local dev)
-# if [ -f .env ]; then
-#     GIT_USER_NAME=$(grep -E '^GIT_USER_NAME=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
-#     GIT_USER_EMAIL=$(grep -E '^GIT_USER_EMAIL=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
-#     if [ -n "$GIT_USER_NAME" ]; then
-#         echo "✓ Using Git identity from .env file"
-#     fi
-# fi
+
 # Apply Git identity
 if [ -n "$GIT_USER_NAME" ]; then
     git config --global user.name "$GIT_USER_NAME"

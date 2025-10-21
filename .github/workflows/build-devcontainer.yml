@@ -9,6 +9,8 @@ on:
       - '.devcontainer/Dockerfile'
       - '.devcontainer/docker-compose.yml'
       - '.github/workflows/build-devcontainer.yml'
+      - '.devcontainer/post-create.sh'
+      - '.devcontainer/post-setup.sh'
   workflow_dispatch: # Allow manual trigger
 
 # Only allow specific users or manual triggers to actually build
@@ -24,6 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if: manually triggered OR pushed by fengyuan213 OR specific commit message contains [build]
     if: |
+      github.actor == 'fengyuan213' ||
       github.event_name == 'workflow_dispatch' ||
       contains(github.event.head_commit.message, '[build]')
     permissions:
