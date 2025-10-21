@@ -40,7 +40,6 @@ const steps = ["Select Service", "Choose Date & Time", "Enter Details"];
 export default function Booking() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preSelectedPackage = searchParams.get("package");
 
   // Stepper
   const [activeStep, setActiveStep] = useState(0);
@@ -69,7 +68,7 @@ export default function Booking() {
     null
   );
 
-  // Load initial data
+  // Fetch service packages and providers on mount
   useEffect(() => {
     const loadData = async () => {
       setInitialLoading(true);
@@ -82,9 +81,10 @@ export default function Booking() {
         setProviders(providersData);
 
         // Pre-select package if specified in URL
-        if (preSelectedPackage) {
+        const urlPackageId = searchParams.get("package");
+        if (urlPackageId) {
           const pkg = packagesData.find(
-            (p) => p.package_id.toString() === preSelectedPackage
+            (p) => p.package_id.toString() === urlPackageId
           );
           if (pkg) {
             setSelectedPackage(pkg);
@@ -98,7 +98,7 @@ export default function Booking() {
       }
     };
     loadData();
-  }, [preSelectedPackage]);
+  }, [searchParams]);
 
   const handleNext = () => {
     setError(null);
@@ -426,7 +426,7 @@ export default function Booking() {
                   )}
 
                 {/* Booking Summary */}
-                {selectedStartTime && (
+                {selectedStartTime && scheduledDate && (
                   <Grid size={12}>
                     <Paper
                       elevation={0}
