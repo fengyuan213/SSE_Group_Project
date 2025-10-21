@@ -19,13 +19,12 @@
         "donjayamanne.python-environment-manager",
         "kevinrose.vsc-python-indent",
         "njpwerner.autodocstring",
-        "batisteo.vscode-django",
-        "wholroyd.jinja",
+        //"batisteo.vscode-django",
 
         // JavaScript/TypeScript/Node extensions
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss",
+        //"bradlc.vscode-tailwindcss",
         "ms-vscode.vscode-typescript-tslint-plugin",
         "afractal.node-essentials",
         "christian-kohler.path-intellisense",
@@ -40,7 +39,7 @@
 
 
         // Docker & Kubernetes extensions
-        "ms-azuretools.vscode-docker",
+        //"ms-azuretools.vscode-docker",
         "ms-azuretools.vscode-containers",
 
         // Git & Collaboration extensions
@@ -49,13 +48,12 @@
         "ms-vsliveshare.vsliveshare",
 
         // Data & Config extensions
-        "redhat.vscode-yaml",
         "mikestead.dotenv",
 
         // Utilities
         "streetsidesoftware.code-spell-checker",
         "editorconfig.editorconfig",
-        "gruntfuggly.todo-tree"
+        //"gruntfuggly.todo-tree"
       ],
 
       // VS Code settings
