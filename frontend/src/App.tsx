@@ -34,6 +34,13 @@ import Dashboard from "./pages/Dashboard.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ROUTES } from "./lib/routes";
+import Dashboard from "./pages/Dashboard.tsx";
+import InspectionBooking from "./pages/InspectionBooking";
+import Inspections from "./pages/Inspections";
+import InspectionDetails from "./pages/InspectionDetails";
+import ProviderDashboard from "./pages/ProviderDashboard";
+import NearbyServices from "./pages/NearbyServices";
+import DataConsent from "./pages/DataConsent";
 
 function AppContent() {
   const [status, setStatus] = useState("checking...");
@@ -87,8 +94,31 @@ function AppContent() {
           <Button color="inherit" component={Link} to={ROUTES.HOME}>
             Home
           </Button>
+          <Button color="inherit" component={Link} to={ROUTES.NEARBY_SERVICES}>
+            Find Nearby
+          </Button>
           <Button color="inherit" component={Link} to={ROUTES.BOOKING_GENERAL}>
-            General Booking
+            Book Service
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            to={ROUTES.BOOKING_INSPECTION}
+          >
+            Book Inspection
+          </Button>
+          <Button color="inherit" component={Link} to={ROUTES.INSPECTIONS}>
+            My Inspections
+          </Button>
+          <Button
+            color="inherit"
+            component={Link}
+            to={ROUTES.PROVIDER_DASHBOARD}
+          >
+            Provider
+          </Button>
+          <Button color="inherit" component={Link} to={ROUTES.DATA_CONSENT}>
+            Data Consent
           </Button>
 
           <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 1 }}>
@@ -215,7 +245,19 @@ function AppContent() {
         <ErrorBoundary>
           <Routes>
             <Route path={ROUTES.HOME} element={<Dashboard />} />
+            <Route path={ROUTES.NEARBY_SERVICES} element={<NearbyServices />} />
             <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
+            <Route
+              path={ROUTES.BOOKING_INSPECTION}
+              element={<InspectionBooking />}
+            />
+            <Route path={ROUTES.INSPECTIONS} element={<Inspections />} />
+            <Route path="/inspections/:id" element={<InspectionDetails />} />
+            <Route
+              path={ROUTES.PROVIDER_DASHBOARD}
+              element={<ProviderDashboard />}
+            />
+            <Route path={ROUTES.DATA_CONSENT} element={<DataConsent />} />
             <Route path={ROUTES.PAYMENT} element={<Payment />} />
             <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
             <Route path={ROUTES.PROFILE} element={<UserProfile />} />

@@ -23,9 +23,12 @@ import {
   ThumbUp,
   Share,
   BookmarkBorder,
+  LocalOffer,
+  Inventory,
 } from "@mui/icons-material";
 import { bookingApi, type ServicePackage } from "../lib/api";
 import { useNavigate } from "react-router-dom";
+import BundleDetailsModal from "../components/BundleDetailsModal";
 
 interface ServiceCategory {
   id: number;
@@ -91,6 +94,7 @@ interface ServiceCardProps {
 function ServiceCard({ service, onBookNow }: ServiceCardProps) {
   const provider = getMockProvider(service.package_id);
   const imageUrl = getServiceImage(service.category_name, service.package_id);
+  const isBundle = service.package_type === "bundle";
 
   return (
     <Card
@@ -98,6 +102,8 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
         maxWidth: 320,
         borderRadius: 2,
         transition: "transform 0.2s, box-shadow 0.2s",
+        border: isBundle ? "2px solid" : "none",
+        borderColor: isBundle ? "success.main" : "transparent",
         "&:hover": {
           transform: "translateY(-4px)",
           boxShadow: 4,
@@ -144,17 +150,49 @@ function ServiceCard({ service, onBookNow }: ServiceCardProps) {
             <PlayArrow sx={{ fontSize: 32 }} />
           </Avatar>
         </Box>
-        <Chip
-          label={`${service.duration_minutes} min`}
-          size="small"
-          sx={{
-            position: "absolute",
-            bottom: 8,
-            right: 8,
-            backgroundColor: "rgba(0,0,0,0.8)",
-            color: "white",
-          }}
-        />
+        {isBundle && (
+          <Chip
+            icon={<Inventory />}
+            label={`Bundle: ${service.included_services_count || 0} services`}
+            size="small"
+            color="success"
+            sx={{
+              position: "absolute",
+              top: 8,
+              left: 8,
+              fontWeight: "bold",
+            }}
+          />
+        )}
+        {isBundle &&
+          service.discount_percentage &&
+          service.discount_percentage > 0 && (
+            <Chip
+              icon={<LocalOffer />}
+              label={`Save ${service.discount_percentage}%`}
+              size="small"
+              color="error"
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                fontWeight: "bold",
+              }}
+            />
+          )}
+        {!isBundle && (
+          <Chip
+            label={`${service.duration_minutes} min`}
+            size="small"
+            sx={{
+              position: "absolute",
+              bottom: 8,
+              right: 8,
+              backgroundColor: "rgba(0,0,0,0.8)",
+              color: "white",
+            }}
+          />
+        )}
       </Box>
 
       <CardContent sx={{ pb: 1 }}>
@@ -256,6 +294,8 @@ export default function Dashboard() {
   const [services, setServices] = useState<ServicePackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [bundleModalOpen, setBundleModalOpen] = useState(false);
+  const [selectedBundleId, setSelectedBundleId] = useState<number | null>(null);
   const navigate = useNavigate();
 
   const categories: ServiceCategory[] = [
@@ -292,8 +332,18 @@ export default function Dashboard() {
         );
 
   const handleBookNow = (service: ServicePackage) => {
-    // Navigate to booking page with pre-selected service
-    navigate(`/booking/general?package=${service.package_id}`);
+    // If it's a bundle, show details modal first
+    if (service.package_type === "bundle") {
+      setSelectedBundleId(service.package_id);
+      setBundleModalOpen(true);
+    } else {
+      // Navigate to booking page with pre-selected service
+      navigate(`/booking/general?package=${service.package_id}`);
+    }
+  };
+
+  const handleBundleBook = (packageId: number) => {
+    navigate(`/booking/general?package=${packageId}`);
   };
 
   const handleCategoryChange = (_: React.SyntheticEvent, newValue: string) => {
@@ -357,6 +407,17 @@ export default function Dashboard() {
           </Typography>
         </Box>
       )}
+
+      {/* Bundle Details Modal */}
+      <BundleDetailsModal
+        open={bundleModalOpen}
+        packageId={selectedBundleId}
+        onClose={() => {
+          setBundleModalOpen(false);
+          setSelectedBundleId(null);
+        }}
+        onBookNow={handleBundleBook}
+      />
     </Container>
   );
 }

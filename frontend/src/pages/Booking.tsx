@@ -40,7 +40,6 @@ const steps = ["Select Service", "Choose Date & Time", "Enter Details"];
 export default function Booking() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const preSelectedPackage = searchParams.get("package");
 
   // Stepper
   const [activeStep, setActiveStep] = useState(0);
@@ -69,7 +68,11 @@ export default function Booking() {
     null
   );
 
-  // Load initial data
+  // Get inspection context from URL
+  const inspectionId = searchParams.get("inspection_id");
+  const urgentItemId = searchParams.get("urgent_item_id");
+
+  // Fetch service packages and providers on mount
   useEffect(() => {
     const loadData = async () => {
       setInitialLoading(true);
@@ -82,9 +85,10 @@ export default function Booking() {
         setProviders(providersData);
 
         // Pre-select package if specified in URL
-        if (preSelectedPackage) {
+        const urlPackageId = searchParams.get("package");
+        if (urlPackageId) {
           const pkg = packagesData.find(
-            (p) => p.package_id.toString() === preSelectedPackage
+            (p) => p.package_id.toString() === urlPackageId
           );
           if (pkg) {
             setSelectedPackage(pkg);
@@ -98,7 +102,7 @@ export default function Booking() {
       }
     };
     loadData();
-  }, [preSelectedPackage]);
+  }, [searchParams]);
 
   const handleNext = () => {
     setError(null);
@@ -131,11 +135,13 @@ export default function Booking() {
       const bookingData = {
         package_id: selectedPackage!.package_id,
         ...(selectedProvider && { provider_id: selectedProvider.provider_id }),
-        booking_type: "non-urgent",
+        booking_type: inspectionId ? "inspection-based" : "non-urgent",
         start_date: scheduledDate!.format("YYYY-MM-DD"),
         start_time: selectedStartTime!,
         service_address: serviceAddress,
         special_instructions: specialInstructions || null,
+        ...(inspectionId && { inspection_id: parseInt(inspectionId) }),
+        ...(urgentItemId && { urgent_item_id: parseInt(urgentItemId) }),
       };
 
       const response = await bookingApi.createBooking(bookingData);
@@ -180,6 +186,19 @@ export default function Booking() {
           Fast, reliable, and professional services at your doorstep
         </Typography>
       </Box>
+
+      {/* Inspection Context Alert */}
+      {inspectionId && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2">
+            Booking from Inspection #{inspectionId}
+          </Typography>
+          <Typography variant="body2">
+            This booking is linked to your inspection and will mark the related
+            work item as resolved when completed.
+          </Typography>
+        </Alert>
+      )}
 
       {/* Stepper */}
       <Card sx={{ mb: 4, overflow: "visible" }}>
@@ -426,7 +445,7 @@ export default function Booking() {
                   )}
 
                 {/* Booking Summary */}
-                {selectedStartTime && (
+                {selectedStartTime && scheduledDate && (
                   <Grid size={12}>
                     <Paper
                       elevation={0}

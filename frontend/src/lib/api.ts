@@ -13,6 +13,37 @@ export interface ServicePackage {
   duration_minutes: number;
   category_name: string;
   category_id: number;
+  package_type?: "single" | "bundle";
+  discount_percentage?: number;
+  is_customizable?: boolean;
+  included_services_count?: number;
+}
+
+export interface BundleIncludedService {
+  package_id: number;
+  package_name: string;
+  description: string;
+  base_price: number;
+  duration_minutes: number;
+  category_name?: string;
+  is_optional: boolean;
+  display_order: number;
+}
+
+export interface BundlePackage {
+  package_id: number;
+  package_name: string;
+  description: string;
+  bundle_price: number;
+  total_duration: number;
+  discount_percentage: number;
+  is_customizable: boolean;
+  category_id: number;
+  category_name: string;
+  included_services: BundleIncludedService[];
+  original_total_price: number;
+  package_type?: string;
+  matching_services?: number; // Number of work item packages this bundle covers
 }
 
 export interface ServiceProvider {
@@ -24,6 +55,46 @@ export interface ServiceProvider {
   is_verified: boolean;
 }
 
+export interface NearbyProvider {
+  provider_id: number;
+  business_name: string;
+  description: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+  average_rating: number;
+  is_verified: boolean;
+  service_count: number;
+  services: string[]; // Array of service package names
+  covid_restrictions: CovidRestriction[];
+}
+
+export interface CovidRestriction {
+  area: string;
+  restriction: "Low" | "Medium" | "High";
+  distance_km?: number;
+}
+
+export interface NearbyProvidersResponse {
+  providers: NearbyProvider[];
+  count: number;
+  search_center: { latitude: number; longitude: number };
+  radius_km: number;
+}
+
+export interface CovidRestrictionsResponse {
+  restrictions: CovidRestriction[];
+  count: number;
+  location: { latitude: number; longitude: number };
+}
+
+export interface LocationData {
+  latitude: number;
+  longitude: number;
+  postcode?: string;
+}
+
 export interface BookingData {
   package_id: number;
   provider_id?: number;
@@ -32,6 +103,8 @@ export interface BookingData {
   start_time: string; // HH:MM (must be on 30-min boundary)
   service_address: string;
   special_instructions?: string | null;
+  inspection_id?: number; // Link to inspection if this booking is for inspection-based work
+  urgent_item_id?: number; // Link to specific work item if applicable
   // Note: end_date is NOT sent - backend calculates it automatically based on service duration
 }
 
@@ -77,6 +150,55 @@ export interface ConfirmationDetails {
   payment_date: string;
   scheduled_date: string | null;
   service_address: string | null;
+}
+
+export interface Inspection {
+  inspection_id: number;
+  user_id: string;
+  provider_id?: number;
+  provider_name?: string;
+  inspection_date: string;
+  inspection_status: "scheduled" | "completed" | "cancelled";
+  inspection_notes?: string;
+  inspector_name?: string;
+  created_at: string;
+  updated_at?: string;
+  work_items_count?: number;
+  critical_count?: number;
+  high_count?: number;
+  medium_count?: number;
+}
+
+export interface UrgentWorkItem {
+  urgent_item_id: number;
+  inspection_id: number;
+  item_description: string;
+  urgency_level: "critical" | "high" | "medium";
+  discount_percentage: number;
+  recommended_package_id?: number;
+  recommended_package?: ServicePackage;
+  is_resolved: boolean;
+  created_at: string;
+}
+
+export interface InspectionDetails extends Inspection {
+  work_items: UrgentWorkItem[];
+  recommended_bundles: BundlePackage[];
+}
+
+export interface InspectionBookingData {
+  user_id: string;
+  inspection_date: string; // ISO format: YYYY-MM-DDTHH:MM
+  service_address: string;
+  notes?: string;
+  provider_id?: number;
+}
+
+export interface WorkItemData {
+  item_description: string;
+  urgency_level: "critical" | "high" | "medium";
+  discount_percentage?: number;
+  recommended_package_id?: number;
 }
 
 // Demo data - Expanded with more diverse services
@@ -378,7 +500,7 @@ const DEMO_PROVIDERS: ServiceProvider[] = [
 
 // API Functions
 export const bookingApi = {
-  // Get all service packages
+  // Get all service packages (single and bundles)
   getPackages: async (): Promise<ServicePackage[]> => {
     try {
       const response = await api.get<ServicePackage[]>("/packages");
@@ -387,6 +509,25 @@ export const bookingApi = {
       console.warn("API call failed, using demo data for packages", error);
       return DEMO_PACKAGES;
     }
+  },
+
+  // Get all bundle packages
+  getBundles: async (): Promise<BundlePackage[]> => {
+    try {
+      const response = await api.get<BundlePackage[]>("/packages/bundles");
+      return response.data;
+    } catch (error) {
+      console.warn("API call failed for bundles", error);
+      return [];
+    }
+  },
+
+  // Get bundle details by ID
+  getBundleDetails: async (packageId: number): Promise<BundlePackage> => {
+    const response = await api.get<BundlePackage>(
+      `/packages/${packageId}/bundle-details`
+    );
+    return response.data;
   },
 
   // Get all service providers
@@ -498,6 +639,168 @@ export const availabilityApi = {
     const response = await api.get<AvailabilityResponse>(
       `/availability/slots?${params}`
     );
+    return response.data;
+  },
+};
+
+// Inspection API
+export const inspectionApi = {
+  // Book a new inspection
+  createInspection: async (
+    data: InspectionBookingData
+  ): Promise<Inspection> => {
+    const response = await api.post<Inspection>("/inspections", data);
+    return response.data;
+  },
+
+  // Get list of inspections for a user or provider
+  getInspections: async (
+    userId?: string,
+    providerId?: number
+  ): Promise<Inspection[]> => {
+    const params = new URLSearchParams();
+    if (userId) params.append("user_id", userId);
+    if (providerId) params.append("provider_id", providerId.toString());
+
+    const response = await api.get<Inspection[]>(
+      `/inspections?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  // Get detailed inspection with work items and bundle recommendations
+  getInspectionDetails: async (
+    inspectionId: number
+  ): Promise<InspectionDetails> => {
+    const response = await api.get<InspectionDetails>(
+      `/inspections/${inspectionId}`
+    );
+    return response.data;
+  },
+
+  // Update inspection (mark complete, add notes, etc.)
+  updateInspection: async (
+    inspectionId: number,
+    data: Partial<{
+      inspection_status: "scheduled" | "completed" | "cancelled";
+      inspection_notes: string;
+      inspector_name: string;
+    }>
+  ): Promise<Inspection> => {
+    const response = await api.put<Inspection>(
+      `/inspections/${inspectionId}`,
+      data
+    );
+    return response.data;
+  },
+
+  // Create a work item for an inspection
+  createWorkItem: async (
+    inspectionId: number,
+    data: WorkItemData
+  ): Promise<UrgentWorkItem> => {
+    const response = await api.post<UrgentWorkItem>(
+      `/inspections/${inspectionId}/work-items`,
+      data
+    );
+    return response.data;
+  },
+
+  // Update a work item
+  updateWorkItem: async (
+    inspectionId: number,
+    itemId: number,
+    data: Partial<WorkItemData>
+  ): Promise<UrgentWorkItem> => {
+    const response = await api.put<UrgentWorkItem>(
+      `/inspections/${inspectionId}/work-items/${itemId}`,
+      data
+    );
+    return response.data;
+  },
+
+  // Delete a work item
+  deleteWorkItem: async (
+    inspectionId: number,
+    itemId: number
+  ): Promise<{ message: string }> => {
+    const response = await api.delete<{ message: string }>(
+      `/inspections/${inspectionId}/work-items/${itemId}`
+    );
+    return response.data;
+  },
+};
+
+// Nearby Providers & Location API
+export const locationApi = {
+  // Search for nearby providers
+  searchNearbyProviders: async (
+    latitude: number,
+    longitude: number,
+    radius?: number,
+    categoryId?: number
+  ): Promise<NearbyProvidersResponse> => {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+    if (radius) params.append("radius", radius.toString());
+    if (categoryId) params.append("service_category_id", categoryId.toString());
+
+    const response = await api.get<NearbyProvidersResponse>(
+      `/nearby-providers?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  // Get COVID restrictions for a location
+  getCovidRestrictions: async (
+    latitude: number,
+    longitude: number
+  ): Promise<CovidRestrictionsResponse> => {
+    const params = new URLSearchParams({
+      latitude: latitude.toString(),
+      longitude: longitude.toString(),
+    });
+
+    const response = await api.get<CovidRestrictionsResponse>(
+      `/covid-restrictions?${params.toString()}`
+    );
+    return response.data;
+  },
+};
+
+// User Consent API
+export interface ConsentData {
+  consent_id: number;
+  user_id: string;
+  consent_given: boolean;
+  consent_date: string;
+}
+
+export interface ConsentSaveResponse {
+  success: boolean;
+  consent_id: number;
+  consent_date: string;
+  message: string;
+}
+
+export const consentApi = {
+  // Save user consent
+  saveConsent: async (
+    userId: string,
+    consentGiven: boolean
+  ): Promise<ConsentSaveResponse> => {
+    const response = await api.post<ConsentSaveResponse>("/consent", {
+      user_id: userId,
+      consent_given: consentGiven,
+    });
+    return response.data;
+  },
+
+  // Get user consent status
+  getConsent: async (userId: string): Promise<ConsentData> => {
+    const response = await api.get<ConsentData>(`/consent/${userId}`);
     return response.data;
   },
 };

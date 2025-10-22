@@ -8,9 +8,15 @@
 export const ROUTES = {
   HOME: "/",
   BOOKING_GENERAL: "/booking/general",
+  BOOKING_INSPECTION: "/booking/inspection",
   PAYMENT: "/payment",
   CONFIRMATION: "/confirmation",
   PROFILE: "/profile",
+  INSPECTIONS: "/inspections",
+  INSPECTION_DETAILS: "/inspections/:id",
+  PROVIDER_DASHBOARD: "/provider",
+  NEARBY_SERVICES: "/nearby-services",
+  DATA_CONSENT: "/data-consent",
 } as const;
 
 /**
@@ -50,3 +56,6 @@ export type RouteKey = keyof typeof ROUTES;
 
 // Type for route values
 export type RouteValue = (typeof ROUTES)[RouteKey];
+export const buildInspectionDetailsRoute = (inspectionId: number) => {
+  return `/inspections/${inspectionId}`;
+};

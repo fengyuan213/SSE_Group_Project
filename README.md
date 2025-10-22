@@ -44,9 +44,14 @@ A modern full-stack web application with React (TypeScript) frontend and Flask (
 - **VS Code** with **Dev Containers extension** (recommended)
 - **Git**
 
-### Recommended Setup - DevContainer (Use This!)
+### Recommended Setup - when setup locally
 
-> 💡 **First Time Setup:** After setup edit `.env` file and set your Git name/email (see step 4 below) if you use git inside the container
+```bash
+#codespace automatically configure it so it would be fine
+git config --global user.name "yourgithubname"
+git config --global user.email "youremail@example.com"
+
+```
 
 **This is the recommended approach** - uses Docker for consistent development environment:
 
@@ -601,91 +606,6 @@ Flask automatically serves:
 - API endpoints at `/api/*`
 
 ---
-
-## 🚀 Docker Image Registry
-
-### Pre-built Images for Faster Setup
-
-We publish pre-built DevContainer images to **GitHub Container Registry** to speed up setup:
-
-**Image Location:** `ghcr.io/fengyuan213/sse_group_project/devcontainer:latest`
-
-**How it works:**
-
-1. Push to `main` or `dev` branch → GitHub Actions builds and publishes image automatically
-2. Team members pull the pre-built image instead of building from scratch
-3. Setup time reduces from 10-15 min to 2-3 min ⚡
-
-### Manual Image Publishing
-
-**Option 1: GitHub Actions (Automatic)**
-
-- Push changes to `.devcontainer/Dockerfile` to `main` or `dev` branch
-- GitHub Actions automatically builds and publishes the image
-- Wait 5-10 minutes for the workflow to complete
-- Check: https://github.com/fengyuan213/SSE_Group_Project/actions
-
-**Option 2: Manual Script**
-
-```bash
-cd .devcontainer
-
-# Login to GitHub Container Registry
-docker login ghcr.io -u YOUR_GITHUB_USERNAME
-
-# Build and push (interactive)
-./build-and-push.sh
-
-# Or build and push with custom tag
-./build-and-push.sh dev
-```
-
-**Option 3: Manual Commands**
-
-```bash
-cd .devcontainer
-
-# Build the image
-docker build -t ghcr.io/fengyuan213/sse_group_project/devcontainer:latest .
-
-# Login to registry
-docker login ghcr.io -u YOUR_GITHUB_USERNAME
-
-# Push the image
-docker push ghcr.io/fengyuan213/sse_group_project/devcontainer:latest
-```
-
-### Making Image Public
-
-By default, GitHub Container Registry images are private. To make it public:
-
-1. Go to: https://github.com/fengyuan213/SSE_Group_Project/pkgs/container/sse_group_project%2Fdevcontainer
-2. Click **"Package settings"**
-3. Scroll to **"Danger Zone"**
-4. Click **"Change visibility"** → Select **"Public"**
-5. Confirm the change
-
-Now team members can pull without authentication!
-
----
-
-## 🐛 Troubleshooting
-
-### Docker/DevContainer Issues
-
-**Container won't start:**
-
-```bash
-# Check Docker is running
-docker ps
-
-# Rebuild container
-# In VS Code: Cmd/Ctrl+Shift+P → "Dev Containers: Rebuild Container"
-
-# Or from terminal:
-docker compose down
-docker compose up -d
-```
 
 **Database connection fails:**
 

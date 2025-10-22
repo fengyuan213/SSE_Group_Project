@@ -4,6 +4,9 @@
     "module": "ESNext",
     "skipLibCheck": true,
 
+    /* Performance */
+    "incremental": true,
+
     /* Bundler / project mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
