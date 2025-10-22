@@ -23,9 +23,13 @@ def sync_user():
     Sync user data with database.
     Creates new user on signup or updates existing user on login.
     """
+    conn = None
+    cursor = None
     try:
+        # SECURITY: Get auth0_id from verified JWT token, not request body
+        auth0_id = request.user.get("sub")
+        # auth0_id = data.get("auth0_id")
         data = request.get_json()
-        auth0_id = data.get("auth0_id")
         email = data.get("email")
         name = data.get("name")
         picture = data.get("picture")
@@ -230,6 +234,8 @@ def sync_user():
 @requires_auth
 def get_user_profile():
     """Get the current user's profile"""
+    conn = None
+    cursor = None
     try:
         auth0_id = request.user.get("sub")
 
@@ -301,6 +307,8 @@ def get_user_profile():
 @requires_auth
 def get_auth_history():
     """Get authentication history for current user from audit logs"""
+    conn = None
+    cursor = None
     try:
         auth0_id = request.user.get("sub")
 

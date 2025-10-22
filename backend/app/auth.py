@@ -66,6 +66,36 @@ def verify_jwt(token):
         # Decode and verify the token
         claims = jwt.decode(token, jwks)
         claims.validate()
+
+        # SECURITY: Validate audience and issuer to ensure token is for this API
+        expected_issuer = f"https://{AUTH0_DOMAIN}/"
+
+        # Validate audience claim (can be string or list)
+        audience = claims.get("aud")
+        if isinstance(audience, str):
+            audience_list = [audience]
+        else:
+            audience_list = audience or []
+
+        if AUTH0_AUDIENCE not in audience_list:
+            raise AuthError(
+                {
+                    "code": "invalid_audience",
+                    "description": "Token audience claim is invalid.",
+                },
+                401,
+            )
+
+        # Validate issuer claim
+        if claims.get("iss") != expected_issuer:
+            raise AuthError(
+                {
+                    "code": "invalid_issuer",
+                    "description": "Token issuer claim is invalid.",
+                },
+                401,
+            )
+
         return claims
     except JoseError as e:
         raise AuthError(
@@ -74,7 +104,7 @@ def verify_jwt(token):
                 "description": f"Unable to parse authentication token: {str(e)}",
             },
             401,
-        )
+        ) from e
 
 
 def requires_auth(f):

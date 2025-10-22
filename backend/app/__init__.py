@@ -10,7 +10,6 @@ from .routes.auth_routes import auth_bp
 def create_app():
     app = Flask(__name__)
     # CORS for the Vite dev server
-    # CORS for the Vite dev server
     CORS(
         app,
         resources={
