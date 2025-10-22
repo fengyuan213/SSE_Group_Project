@@ -2134,3 +2134,117 @@ def get_covid_restrictions():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ============================================================================
+# USER CONSENT ENDPOINTS
+# ============================================================================
+
+
+@api_bp.post("/consent")
+def save_user_consent():
+    """
+    Save user consent for data collection.
+    Expected JSON body:
+    {
+        "user_id": "uuid-string",
+        "consent_given": true/false
+    }
+    """
+    try:
+        data = request.get_json()
+
+        # Validate required fields
+        if "user_id" not in data or "consent_given" not in data:
+            return jsonify({"error": "user_id and consent_given are required"}), 400
+
+        user_id = data["user_id"]
+        consent_given = data["consent_given"]
+
+        # Get client IP address
+        ip_address = request.remote_addr
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if consent record already exists
+                cur.execute(
+                    """
+                    SELECT consent_id FROM user_data_consent
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+                existing = cur.fetchone()
+
+                if existing:
+                    # Update existing consent
+                    cur.execute(
+                        """
+                        UPDATE user_data_consent
+                        SET consent_given = %s,
+                            consent_date = CURRENT_TIMESTAMP,
+                            ip_address = %s
+                        WHERE user_id = %s
+                        RETURNING consent_id, consent_date
+                        """,
+                        (consent_given, ip_address, user_id),
+                    )
+                else:
+                    # Insert new consent record
+                    cur.execute(
+                        """
+                        INSERT INTO user_data_consent (user_id, consent_given, ip_address)
+                        VALUES (%s, %s, %s)
+                        RETURNING consent_id, consent_date
+                        """,
+                        (user_id, consent_given, ip_address),
+                    )
+
+                result = cur.fetchone()
+
+                return jsonify(
+                    {
+                        "success": True,
+                        "consent_id": result["consent_id"],
+                        "consent_date": result["consent_date"].isoformat(),
+                        "message": "Consent saved successfully",
+                    }
+                )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@api_bp.get("/consent/<user_id>")
+def get_user_consent(user_id):
+    """
+    Get user's current consent status.
+    Returns 404 if no consent record found.
+    """
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT consent_id, user_id, consent_given, consent_date, ip_address
+                    FROM user_data_consent
+                    WHERE user_id = %s
+                    """,
+                    (user_id,),
+                )
+                consent = cur.fetchone()
+
+                if not consent:
+                    return jsonify({"error": "No consent record found"}), 404
+
+                return jsonify(
+                    {
+                        "consent_id": consent["consent_id"],
+                        "user_id": consent["user_id"],
+                        "consent_given": consent["consent_given"],
+                        "consent_date": consent["consent_date"].isoformat(),
+                    }
+                )
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

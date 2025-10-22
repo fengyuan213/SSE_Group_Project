@@ -21,6 +21,7 @@ import Inspections from "./pages/Inspections";
 import InspectionDetails from "./pages/InspectionDetails";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import NearbyServices from "./pages/NearbyServices";
+import DataConsent from "./pages/DataConsent";
 
 export default function App() {
   const [status, setStatus] = useState("checking...");
@@ -74,6 +75,9 @@ export default function App() {
           >
             Provider
           </Button>
+          <Button color="inherit" component={Link} to={ROUTES.DATA_CONSENT}>
+            Data Consent
+          </Button>
           <Box sx={{ ml: 2 }}>
             <Chip
               size="small"
@@ -107,6 +111,7 @@ export default function App() {
               path={ROUTES.PROVIDER_DASHBOARD}
               element={<ProviderDashboard />}
             />
+            <Route path={ROUTES.DATA_CONSENT} element={<DataConsent />} />
             <Route path={ROUTES.PAYMENT} element={<Payment />} />
             <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />

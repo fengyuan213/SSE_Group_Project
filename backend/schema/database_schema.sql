@@ -391,6 +391,22 @@ CREATE TABLE provider_booking_responses (
     action_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
 
+-- User Data Consent (GDPR Compliance)
+CREATE TABLE user_data_consent (
+    consent_id SERIAL PRIMARY KEY,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    consent_given BOOLEAN NOT NULL DEFAULT FALSE,
+    consent_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    ip_address TEXT,
+    UNIQUE(user_id)
+);
+
+CREATE INDEX idx_user_data_consent_user ON user_data_consent(user_id);
+
+COMMENT ON TABLE user_data_consent IS 'Tracks user consent for data collection and processing';
+COMMENT ON COLUMN user_data_consent.consent_given IS 'Whether user has consented to data collection';
+COMMENT ON COLUMN user_data_consent.ip_address IS 'IP address from which consent was given (audit trail)';
+
 
 
 -- ============================================================================

@@ -15,6 +15,7 @@ export const ROUTES = {
   INSPECTION_DETAILS: "/inspections/:id",
   PROVIDER_DASHBOARD: "/provider",
   NEARBY_SERVICES: "/nearby-services",
+  DATA_CONSENT: "/data-consent",
 } as const;
 
 /**

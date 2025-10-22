@@ -769,3 +769,38 @@ export const locationApi = {
     return response.data;
   },
 };
+
+// User Consent API
+export interface ConsentData {
+  consent_id: number;
+  user_id: string;
+  consent_given: boolean;
+  consent_date: string;
+}
+
+export interface ConsentSaveResponse {
+  success: boolean;
+  consent_id: number;
+  consent_date: string;
+  message: string;
+}
+
+export const consentApi = {
+  // Save user consent
+  saveConsent: async (
+    userId: string,
+    consentGiven: boolean
+  ): Promise<ConsentSaveResponse> => {
+    const response = await api.post<ConsentSaveResponse>("/consent", {
+      user_id: userId,
+      consent_given: consentGiven,
+    });
+    return response.data;
+  },
+
+  // Get user consent status
+  getConsent: async (userId: string): Promise<ConsentData> => {
+    const response = await api.get<ConsentData>(`/consent/${userId}`);
+    return response.data;
+  },
+};
