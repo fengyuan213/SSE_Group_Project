@@ -14,7 +14,7 @@ def create_app():
         app,
         resources={
             r"/api/*": {
-                "origins": "*",
+                "origins": os.getenv("CORS_ORIGIN", "*"),
                 "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
                 "allow_headers": ["Content-Type", "Authorization"],
             }
