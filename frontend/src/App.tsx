@@ -34,7 +34,6 @@ import Dashboard from "./pages/Dashboard.tsx";
 import UserProfile from "./pages/UserProfile.tsx";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ROUTES } from "./lib/routes";
-import Dashboard from "./pages/Dashboard.tsx";
 import InspectionBooking from "./pages/InspectionBooking";
 import Inspections from "./pages/Inspections";
 import InspectionDetails from "./pages/InspectionDetails";

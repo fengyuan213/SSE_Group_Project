@@ -1,4 +1,12 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Load environment variables from .env file in workspace root FIRST
+# This must happen before importing other modules that use environment variables
+env_path = Path(__file__).parent.parent.parent / ".env"
+load_dotenv(dotenv_path=env_path)
 
 from flask import Flask
 from flask_cors import CORS

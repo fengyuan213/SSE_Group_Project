@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 
 // https://vite.dev/config/
 export default defineConfig({
+  envDir: "../", // Load .env from root directory
   plugins: [
     react({
       babel: {
@@ -18,9 +19,11 @@ export default defineConfig({
       interval: 100, // Check for changes every 100ms
     },
     hmr: {
-      // Remove host or set to undefined to auto-detect in Codespaces
-      clientPort: 443, // Use HTTPS port for Codespaces
-      protocol: "wss", // Use secure WebSocket (wss://)
+      // Auto-detect environment: use wss:443 for Codespaces, ws for local/WSL2
+      ...(process.env.CODESPACES === "true" && {
+        clientPort: 443,
+        protocol: "wss",
+      }),
     },
     proxy: {
       "/api": {

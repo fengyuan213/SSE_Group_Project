@@ -77,16 +77,6 @@ code .
 #   • Installs 40+ recommended VS Code extensions automatically
 
 
-# 4. Edit .env and set your Git credentials (IMPORTANT!) Ignore if you do not plan to use git inside container
-# Update these lines in .env:
-#   GIT_USER_NAME="Your Name"
-#   GIT_USER_EMAIL="your.email@example.com"
-# Note: .env is loaded during container setup. To apply changes later, see "Updating .env" section.
-
-# after edit, use this to make the change take effect
-set -a &&  source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//') && set +a  # auto export .env
-
-
 ```
 
 ### 🔌 Extensions

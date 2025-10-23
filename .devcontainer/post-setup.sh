@@ -14,8 +14,9 @@ echo ""
 # -----------------------------------------------------------------------------
 if [ -f .env ]; then
     # Load non-commented, non-empty lines safely
+    # Only export lines that match KEY=VALUE format
     set -a
-    source <(grep -v '^[#[:space:]]' .env | sed 's/\r$//')
+    source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env | sed 's/\r$//')
     set +a
     echo "✓ Environment variables loaded from .env"
 fi
@@ -29,7 +30,7 @@ if [ -f .env ]; then
 # Load environment variables from /workspace/.env
 if [ -f /workspace/.env ]; then
     set -a
-    source <(grep -v '^[#[:space:]]' /workspace/.env | sed 's/\r$//')
+    source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' /workspace/.env | sed 's/\r$//')
     set +a
 fi
 EOF

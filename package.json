@@ -8,7 +8,7 @@
     "backend"
   ],
   "scripts": {
-    "setup": "turbo run setup && chmod +x .devcontainer/post-setup.sh && bash .devcontainer/post-setup.sh",
+    "setup": "turbo run setup && bash .devcontainer/post-setup.sh",
     "dev": "turbo run dev",
     "dev:backend": "turbo run dev --filter=backend",
     "dev:frontend": "turbo run dev --filter=frontend",
