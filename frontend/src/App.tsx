@@ -42,10 +42,6 @@ import NearbyServices from "./pages/NearbyServices";
 import DataConsent from "./pages/DataConsent";
 import AuditPage from "./pages/AuditPage.tsx";
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
 function AppContent() {
   const [status, setStatus] = useState("checking...");
   const { loginWithRedirect, logout, isAuthenticated, isLoading, user } =
@@ -59,38 +55,6 @@ function AppContent() {
       .get("/health")
       .then((r) => setStatus((r.data as { status?: string })?.status ?? "down"))
       .catch(() => setStatus("down"));
-  }, []);
-
-  // After the administrator logs in, check whether there are any sensitive audit events, and pop up a reminder if there are any.
-  useEffect(() => {
-    const isAdmin = true; // Assume const isAdmin = true now, when we switch to the real backend database, delete this line.
-    if (!isAdmin) return;
-
-    (async () => {
-      try {
-        const res = await fetch(`/audit.json`);
-        const data: unknown = await res.json();
-
-        const itemsUnknown: unknown[] = Array.isArray(data)
-          ? data
-          : isRecord(data) &&
-            Array.isArray((data as { items?: unknown[] }).items)
-          ? ((data as { items?: unknown[] }).items as unknown[])
-          : [];
-
-        const hasSensitive = itemsUnknown.some((v) => {
-          if (!isRecord(v)) return false;
-          const s = v.sensitivity;
-          return typeof s === "string" && s.toLowerCase() === "sensitive";
-        });
-
-        if (hasSensitive) {
-          alert("There are sensitive audit events. Please review Audit Logs.");
-        }
-      } catch {
-        // Ignores the error.
-      }
-    })();
   }, []);
 
   const apiUp = status === "ok" || status === "up";
