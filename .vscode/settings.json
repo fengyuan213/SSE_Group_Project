@@ -3,8 +3,11 @@
   "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
   "python.envFile": "${workspaceFolder}/backend/.env",
 
-  // TypeScript settings
+  // TypeScript settings - Performance optimizations
   "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.preferences.includePackageJsonAutoImports": "off",
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
 
   // Editor settings
   "editor.formatOnSave": true,
@@ -18,18 +21,36 @@
     "*.ts": "typescript"
   },
 
-  // Exclude from search/files
+  // Exclude from search/files - Performance critical
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true,
-    "**/node_modules": true
+    "**/node_modules": true,
+    "**/.venv": true,
+    "**/dist": true,
+    "**/.turbo": true
   },
   "search.exclude": {
     "**/node_modules": true,
     "**/.venv": true,
-    "**/dist": true
+    "**/dist": true,
+    "**/.turbo": true,
+    "**/build": true
+  },
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.venv/**": true,
+    "**/dist/**": true,
+    "**/.turbo/**": true
   },
 
   // ESLint settings (frontend directory)
-  "eslint.workingDirectories": ["./frontend"]
+  "eslint.workingDirectories": ["./frontend"],
+  "eslint.runtime": "node",
+
+  // Disable expensive features in Codespaces
+  "extensions.ignoreRecommendations": false,
+  "telemetry.telemetryLevel": "off"
 }
