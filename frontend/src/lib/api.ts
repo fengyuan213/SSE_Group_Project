@@ -804,3 +804,312 @@ export const consentApi = {
     return response.data;
   },
 };
+
+// ============================================================================
+// Auth API - Authentication and Authorization
+// ============================================================================
+
+export interface UserSyncData {
+  auth0_id: string;
+  email: string;
+  name?: string;
+  picture?: string;
+  given_name?: string;
+  family_name?: string;
+  age?: number;
+  mobile?: string;
+  country_of_citizenship?: string;
+  language_preferred?: string;
+  covid_vaccination_status?: string;
+}
+
+export interface UserSyncResponse {
+  message: string;
+  event_type: "login" | "signup";
+  user_id: string;
+  login_count: number;
+}
+
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  name: string;
+  given_name?: string;
+  family_name?: string;
+  nickname?: string;
+  picture?: string;
+  email_verified: boolean;
+  created_at: string;
+  last_login: string;
+  login_count: number;
+  roles: string[];
+  age?: number;
+  mobile?: string;
+  country_of_citizenship?: string;
+  language_preferred?: string;
+  covid_vaccination_status?: string;
+}
+
+export interface AuthHistoryEvent {
+  event_type: string;
+  timestamp: string;
+  ip_address: string | null;
+  details: Record<string, unknown>;
+}
+
+export interface AuthHistoryResponse {
+  events: AuthHistoryEvent[];
+}
+
+export const authApi = {
+  /**
+   * Sync user data with backend (creates or updates user)
+   * Called automatically on login via useAuthSync hook
+   */
+  syncUser: async (
+    userData: UserSyncData,
+    token: string
+  ): Promise<UserSyncResponse> => {
+    const response = await api.post<UserSyncResponse>("/auth/sync", userData, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get current user's profile including roles
+   * Used by useUserRoles hook
+   */
+  getUserProfile: async (token: string): Promise<UserProfile> => {
+    const response = await api.get<UserProfile>("/auth/user/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get user's authentication history (login/signup events)
+   */
+  getAuthHistory: async (token: string): Promise<AuthHistoryResponse> => {
+    const response = await api.get<AuthHistoryResponse>(
+      "/auth/user/auth-history",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  },
+};
+
+// ============================================================================
+// ADMIN API TYPES
+// ============================================================================
+
+export interface SystemStats {
+  total_users: number;
+  total_bookings: number;
+  active_bookings: number;
+  total_revenue: number;
+  users_by_role: Record<string, number>;
+  active_users_7_days: number;
+}
+
+export interface AdminUser {
+  user_id: string;
+  auth0_id: string;
+  email: string;
+  name: string;
+  email_verified: boolean;
+  created_at: string;
+  last_login: string;
+  roles: string[];
+  metadata: Record<string, unknown>;
+}
+
+export interface UsersResponse {
+  users: AdminUser[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+}
+
+export interface AuditLog {
+  log_id: number;
+  log_type: string;
+  action: string;
+  action_details: Record<string, unknown>;
+  severity: string;
+  ip_address: string | null;
+  created_at: string;
+  user_email: string | null;
+  user_name: string | null;
+}
+
+export interface AuditLogsResponse {
+  logs: AuditLog[];
+}
+
+export interface AssignRoleRequest {
+  role_name: string;
+}
+
+export interface AssignRoleResponse {
+  message: string;
+  role: string;
+}
+
+export interface RemoveRoleResponse {
+  message: string;
+}
+
+export interface Provider {
+  provider_id: number;
+  business_name: string;
+  description: string;
+  address: string;
+  average_rating: number;
+  is_verified: boolean;
+  is_active: boolean;
+  contact_email: string;
+  contact_name: string;
+}
+
+export interface ProvidersResponse {
+  providers: Provider[];
+}
+
+// ============================================================================
+// ADMIN API FUNCTIONS
+// ============================================================================
+
+/**
+ * Admin API - Functions for admin-only operations
+ * All functions require admin role and valid access token
+ */
+export const adminApi = {
+  /**
+   * Get system overview statistics
+   * Requires: admin role
+   */
+  getSystemStats: async (token: string): Promise<SystemStats> => {
+    const response = await api.get<SystemStats>("/admin/stats/overview", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get all users with pagination
+   * Requires: admin role
+   */
+  getUsers: async (
+    token: string,
+    page: number = 1,
+    perPage: number = 20
+  ): Promise<UsersResponse> => {
+    const response = await api.get<UsersResponse>(
+      `/admin/users?page=${page}&per_page=${perPage}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Assign a role to a user
+   * Requires: admin role
+   */
+  assignRole: async (
+    token: string,
+    userId: string,
+    roleName: string
+  ): Promise<AssignRoleResponse> => {
+    const response = await api.post<AssignRoleResponse>(
+      `/admin/users/${userId}/roles`,
+      { role_name: roleName },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Remove a role from a user
+   * Requires: admin role
+   */
+  removeRole: async (
+    token: string,
+    userId: string,
+    roleName: string
+  ): Promise<RemoveRoleResponse> => {
+    const response = await api.delete<RemoveRoleResponse>(
+      `/admin/users/${userId}/roles/${roleName}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get audit logs with optional filters
+   * Requires: admin role
+   */
+  getAuditLogs: async (
+    token: string,
+    options?: {
+      logType?: string;
+      severity?: string;
+      page?: number;
+      perPage?: number;
+    }
+  ): Promise<AuditLogsResponse> => {
+    const params = new URLSearchParams();
+    if (options?.logType) params.append("log_type", options.logType);
+    if (options?.severity) params.append("severity", options.severity);
+    if (options?.page) params.append("page", options.page.toString());
+    if (options?.perPage) params.append("per_page", options.perPage.toString());
+
+    const response = await api.get<AuditLogsResponse>(
+      `/admin/audit-logs?${params.toString()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get all service providers
+   * Requires: admin or provider role
+   */
+  getProviders: async (token: string): Promise<ProvidersResponse> => {
+    const response = await api.get<ProvidersResponse>("/admin/providers", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
+  },
+};

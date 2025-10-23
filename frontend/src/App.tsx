@@ -40,6 +40,9 @@ import InspectionDetails from "./pages/InspectionDetails";
 import ProviderDashboard from "./pages/ProviderDashboard";
 import NearbyServices from "./pages/NearbyServices";
 import DataConsent from "./pages/DataConsent";
+import AdminDashboard from "./pages/AdminDashboard.tsx";
+import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
+import { RoleGate } from "./components/RoleGate.tsx";
 
 function AppContent() {
   const [status, setStatus] = useState("checking...");
@@ -93,6 +96,11 @@ function AppContent() {
           <Button color="inherit" component={Link} to={ROUTES.HOME}>
             Home
           </Button>
+          <RoleGate requiredRoles={["admin"]}>
+            <Button color="inherit" component={Link} to={ROUTES.ADMIN_DASHBOARD}>
+              Admin
+            </Button>
+          </RoleGate>
           <Button color="inherit" component={Link} to={ROUTES.NEARBY_SERVICES}>
             Find Nearby
           </Button>
@@ -109,13 +117,15 @@ function AppContent() {
           <Button color="inherit" component={Link} to={ROUTES.INSPECTIONS}>
             My Inspections
           </Button>
-          <Button
-            color="inherit"
-            component={Link}
-            to={ROUTES.PROVIDER_DASHBOARD}
-          >
-            Provider
-          </Button>
+          <RoleGate requiredRoles={["provider"]}>
+            <Button
+                color="inherit"
+                component={Link}
+                to={ROUTES.PROVIDER_DASHBOARD}
+            >
+              Provider
+            </Button>
+          </RoleGate>
           <Button color="inherit" component={Link} to={ROUTES.DATA_CONSENT}>
             Data Consent
           </Button>
@@ -251,15 +261,30 @@ function AppContent() {
               element={<InspectionBooking />}
             />
             <Route path={ROUTES.INSPECTIONS} element={<Inspections />} />
-            <Route path="/inspections/:id" element={<InspectionDetails />} />
+            <Route
+              path={ROUTES.INSPECTION_DETAILS}
+              element={<InspectionDetails />}
+            />
             <Route
               path={ROUTES.PROVIDER_DASHBOARD}
-              element={<ProviderDashboard />}
+              element={
+                <ProtectedRoute requiredRoles={["provider"]}>
+                  <ProviderDashboard />
+                </ProtectedRoute>
+              }
             />
             <Route path={ROUTES.DATA_CONSENT} element={<DataConsent />} />
             <Route path={ROUTES.PAYMENT} element={<Payment />} />
             <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
             <Route path={ROUTES.PROFILE} element={<UserProfile />} />
+            <Route
+              path={ROUTES.ADMIN_DASHBOARD}
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
         </ErrorBoundary>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   Box,
   Button,
@@ -36,19 +37,24 @@ import dayjs from "dayjs";
 import {
   inspectionApi,
   bookingApi,
+  adminApi,
   type Inspection,
   type UrgentWorkItem,
   type ServicePackage,
+  type Provider,
 } from "../lib/api";
 
 export default function ProviderDashboard() {
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
   const [searchParams, setSearchParams] = useSearchParams();
   const [tabValue, setTabValue] = useState(0);
 
-  // Provider selection (mock auth)
+  // Provider selection
   const [providerId, setProviderId] = useState<number>(
     parseInt(searchParams.get("provider_id") || "1")
   );
+  const [providers, setProviders] = useState<Provider[]>([]);
+  const [loadingProviders, setLoadingProviders] = useState(true);
 
   // Data
   const [inspections, setInspections] = useState<Inspection[]>([]);
@@ -105,6 +111,30 @@ export default function ProviderDashboard() {
       console.error("Failed to load work items:", err);
     }
   }, [selectedInspection]);
+
+  // Fetch providers list
+  useEffect(() => {
+    const fetchProviders = async () => {
+      if (!isAuthenticated) {
+        setLoadingProviders(false);
+        return;
+      }
+
+      try {
+        setLoadingProviders(true);
+        const token = await getAccessTokenSilently();
+        const providersData = await adminApi.getProviders(token);
+        setProviders(providersData.providers);
+      } catch (err) {
+        console.error("Failed to load providers:", err);
+        // Don't set error state here to avoid blocking the UI
+      } finally {
+        setLoadingProviders(false);
+      }
+    };
+
+    fetchProviders();
+  }, [isAuthenticated, getAccessTokenSilently]);
 
   useEffect(() => {
     setSearchParams({ provider_id: providerId.toString() });
@@ -256,16 +286,34 @@ export default function ProviderDashboard() {
           </Typography>
         </Box>
 
-        <FormControl sx={{ minWidth: 200 }}>
+        <FormControl sx={{ minWidth: 250 }}>
           <InputLabel>Provider</InputLabel>
           <Select
             value={providerId}
             onChange={(e) => setProviderId(Number(e.target.value))}
             label="Provider"
+            disabled={loadingProviders || providers.length === 0}
           >
-            <MenuItem value={1}>Provider #1</MenuItem>
-            <MenuItem value={2}>Provider #2</MenuItem>
-            <MenuItem value={3}>Provider #3</MenuItem>
+            {loadingProviders ? (
+              <MenuItem value={providerId} disabled>
+                <CircularProgress size={20} sx={{ mr: 1 }} />
+                Loading providers...
+              </MenuItem>
+            ) : providers.length === 0 ? (
+              <MenuItem value={0} disabled>
+                No providers available
+              </MenuItem>
+            ) : (
+              providers.map((provider) => (
+                <MenuItem
+                  key={provider.provider_id}
+                  value={provider.provider_id}
+                >
+                  {provider.business_name}
+                  {provider.is_verified && " ✓"}
+                </MenuItem>
+              ))
+            )}
           </Select>
         </FormControl>
       </Stack>
