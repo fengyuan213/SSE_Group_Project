@@ -61,6 +61,9 @@ export default function AuditPage() {
   const [page, setPage] = useState(1);
   const pageSize = 15;
 
+  // === NEW: 弹窗开关 ===
+  const [sensOpen, setSensOpen] = useState(false);
+
   useEffect(() => {
     setPage(1);
   }, [query, sev]);
@@ -175,6 +178,15 @@ export default function AuditPage() {
   const showingFrom = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const showingTo = Math.min(safePage * pageSize, filtered.length);
 
+  // === NEW: 统计敏感事件，并在进入页面/加载完成后弹窗 ===
+  const sensitiveItems = useMemo(() => items.filter(isSensitive), [items]);
+
+  useEffect(() => {
+    if (sensitiveItems.length > 0) {
+      setSensOpen(true);
+    }
+  }, [sensitiveItems.length]);
+
   function exportCSV() {
     const headers = [
       "time",
@@ -223,12 +235,62 @@ export default function AuditPage() {
     <div style={{ padding: 16 }}>
       <h2>Audit Logs</h2>
 
+      {/* === NEW: 页面内弹窗（仅当有敏感事件时显示） === */}
+      {sensOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+          onClick={() => setSensOpen(false)}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 8,
+              padding: 16,
+              width: "min(560px, 92vw)",
+              boxShadow: "0 12px 32px rgba(0,0,0,0.2)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>Sensitive audit events detected</h3>
+            <p style={{ marginTop: 8 }}>
+              There are <b>{sensitiveItems.length}</b> sensitive audit event(s)
+              that may require immediate review.
+            </p>
+            <div
+              style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}
+            >
+              <button
+                onClick={() => {
+                  setSev("sensitive"); // 一键切到“只看敏感”
+                  setPage(1);
+                  setSensOpen(false);
+                }}
+              >
+                View sensitive only
+              </button>
+              <button onClick={() => setSensOpen(false)}>Dismiss</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         style={{
           display: "flex",
           gap: 8,
           alignItems: "center",
           marginBottom: 12,
+          flexWrap: "wrap",
         }}
       >
         <input
@@ -328,6 +390,7 @@ export default function AuditPage() {
           })}
         </tbody>
       </table>
+
       <div
         style={{
           display: "flex",
