@@ -1,79 +1,66 @@
 #!/bin/bash
-# Minimal post-setup tasks after Turbo setup completes
+# Runs after npm run setup completes (called by 'npm run setup')
+# This script finalizes the environment after dependencies are installed
+set -e
 
-# Create .env from example if needed
-if [ ! -f .env ] && [ -f env.example ]; then
-    cp env.example .env
-    echo "✓ Created .env from env.example"
-fi
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "🔧 Running post-setup finalization..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
 
-# Load all environment variables from .env (excluding comments and empty lines)
+# -----------------------------------------------------------------------------
+# 1. Load root .env file for current session
+# -----------------------------------------------------------------------------
 if [ -f .env ]; then
-    set -a  # Automatically export all variables
-    source <(grep -v '^#' .env | grep -v '^$' | sed 's/\r$//')
-    set +a  # Stop auto-exporting
+    # Load non-commented, non-empty lines safely
+    # Only export lines that match KEY=VALUE format
+    set -a
+    source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env | sed 's/\r$//')
+    set +a
     echo "✓ Environment variables loaded from .env"
 fi
 
-# Configure Git
-git config --global --add safe.directory /workspace 2>/dev/null || true
-git config --global commit.gpgsign false 2>/dev/null || true
-
-# Set Git user from .env if available
+# -----------------------------------------------------------------------------
+# 2. Auto-load .env in future shells (~/.bashrc and ~/.zshrc)
+# -----------------------------------------------------------------------------
 if [ -f .env ]; then
-    # Source Git config from .env
-    GIT_USER_NAME=$(grep "^GIT_USER_NAME=" .env | cut -d '=' -f2- | tr -d '"')
-    GIT_USER_EMAIL=$(grep "^GIT_USER_EMAIL=" .env | cut -d '=' -f2- | tr -d '"')
-fi
+    ENV_LOAD_BLOCK=$(cat <<'EOF'
 
-# Configure Git user
-if [ -n "$GIT_USER_NAME" ] && [ "$GIT_USER_NAME" != "Your Name" ]; then
-    git config --global user.name "$GIT_USER_NAME"
-    git config --global user.email "$GIT_USER_EMAIL"
-    echo "✓ Git user configured from .env: $GIT_USER_NAME <$GIT_USER_EMAIL>"
-elif [ -z "$(git config --global user.name)" ]; then
-    # Fallback to placeholder
-    git config --global user.name "vscode"
-    git config --global user.email "vscode@localhost"
-    echo "⚠️  Git user set to default. Please update .env with your Git name and email!"
-    echo "   Edit GIT_USER_NAME and GIT_USER_EMAIL in .env"
-else
-    echo "✓ Git user already configured: $(git config --global user.name)"
-fi
-
-echo "✓ Git configured"
-
-# Setup environment variables to auto-load in shells
-if [ -f .env ]; then
-    # Add to ~/.zshrc if not already present
-    if [ -f ~/.zshrc ] && ! grep -q "Load environment variables from .env" ~/.zshrc; then
-        cat >> ~/.zshrc << 'EOF'
-
-# Load environment variables from .env
+# Load environment variables from /workspace/.env
 if [ -f /workspace/.env ]; then
     set -a
-    source <(grep -v '^#' /workspace/.env | grep -v '^$' | sed 's/\r$//')
+    source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' /workspace/.env | sed 's/\r$//')
     set +a
 fi
 EOF
+)
+
+    # Add to ~/.zshrc if not already present
+    if [ -f ~/.zshrc ] && ! grep -q "Load environment variables from /workspace/.env" ~/.zshrc; then
+        echo "$ENV_LOAD_BLOCK" >> ~/.zshrc
         echo "✓ Environment auto-load added to ~/.zshrc"
     fi
 
     # Add to ~/.bashrc if not already present
-    if [ -f ~/.bashrc ] && ! grep -q "Load environment variables from .env" ~/.bashrc; then
-        cat >> ~/.bashrc << 'EOF'
-
-# Load environment variables from .env
-if [ -f /workspace/.env ]; then
-    set -a
-    source <(grep -v '^#' /workspace/.env | grep -v '^$' | sed 's/\r$//')
-    set +a
-fi
-EOF
+    if [ -f ~/.bashrc ] && ! grep -q "Load environment variables from /workspace/.env" ~/.bashrc; then
+        echo "$ENV_LOAD_BLOCK" >> ~/.bashrc
         echo "✓ Environment auto-load added to ~/.bashrc"
     fi
 fi
 
+# loading from .env environment variables
+# # Try .env file first (highest priority for local dev)
+# if [ -f .env ]; then
+#     GIT_USER_NAME=$(grep -E '^GIT_USER_NAME=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
+#     GIT_USER_EMAIL=$(grep -E '^GIT_USER_EMAIL=' .env | cut -d '=' -f2- | tr -d '"' | sed 's/\r$//' 2>/dev/null || echo "")
+#     if [ -n "$GIT_USER_NAME" ]; then
+#         echo "✓ Using Git identity from .env file"
+#     fi
+# fi
+
+echo ""
+echo "✅ Post-setup completed successfully."
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "✅ Development environment ready!"
@@ -88,4 +75,3 @@ echo "Access URLs:"
 echo "  Frontend: http://localhost:5173"
 echo "  Backend:  http://localhost:5000"
 echo ""
-

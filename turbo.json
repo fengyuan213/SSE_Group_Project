@@ -1,7 +1,36 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL", "NODE_ENV", "FLASK_PORT", "VITE_PORT"],
-  "globalPassThroughEnv": ["DATABASE_URL", "FLASK_PORT", "VITE_PORT"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "NODE_ENV",
+    "FLASK_PORT",
+    "VITE_PORT",
+    "AUTH0_DOMAIN",
+    "AUTH0_CLIENT_ID",
+    "AUTH0_CLIENT_SECRET",
+    "AUTH0_AUDIENCE",
+    "CORS_ORIGIN",
+    "VITE_AUTH0_DOMAIN",
+    "VITE_AUTH0_CLIENT_ID",
+    "VITE_AUTH0_AUDIENCE",
+    "VITE_APP_URL",
+    "VITE_API_BASE"
+  ],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "FLASK_PORT",
+    "VITE_PORT",
+    "AUTH0_DOMAIN",
+    "AUTH0_CLIENT_ID",
+    "AUTH0_CLIENT_SECRET",
+    "AUTH0_AUDIENCE",
+    "CORS_ORIGIN",
+    "VITE_AUTH0_DOMAIN",
+    "VITE_AUTH0_CLIENT_ID",
+    "VITE_AUTH0_AUDIENCE",
+    "VITE_APP_URL",
+    "VITE_API_BASE"
+  ],
   "tasks": {
     "setup": {
       "cache": false
@@ -9,12 +38,40 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "env": ["DATABASE_URL", "NODE_ENV", "FLASK_PORT", "VITE_PORT"]
+      "env": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "FLASK_PORT",
+        "VITE_PORT",
+        "AUTH0_DOMAIN",
+        "AUTH0_CLIENT_ID",
+        "AUTH0_CLIENT_SECRET",
+        "AUTH0_AUDIENCE",
+        "CORS_ORIGIN",
+        "VITE_AUTH0_DOMAIN",
+        "VITE_AUTH0_CLIENT_ID",
+        "VITE_AUTH0_AUDIENCE",
+        "VITE_APP_URL",
+        "VITE_API_BASE"
+      ]
     },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"],
-      "env": ["DATABASE_URL", "NODE_ENV"]
+      "env": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "AUTH0_DOMAIN",
+        "AUTH0_CLIENT_ID",
+        "AUTH0_CLIENT_SECRET",
+        "AUTH0_AUDIENCE",
+        "CORS_ORIGIN",
+        "VITE_AUTH0_DOMAIN",
+        "VITE_AUTH0_CLIENT_ID",
+        "VITE_AUTH0_AUDIENCE",
+        "VITE_APP_URL",
+        "VITE_API_BASE"
+      ]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -27,4 +84,3 @@
     }
   }
 }
-

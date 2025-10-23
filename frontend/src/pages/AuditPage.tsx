@@ -348,7 +348,7 @@ export default function AuditPage() {
           Prev
         </button>
 
-        {/* page button：1..totalPages */}
+        {/* page button: 1..totalPages */}
         <div style={{ display: "flex", gap: 4 }}>
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
             <button
