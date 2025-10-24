@@ -1,0 +1,4 @@
+# file: /workspace/backend/app/auth.py
+# hypothesis_version: 6.142.3
+
+[401, 'AUTH0_AUDIENCE', 'AUTH0_DOMAIN', 'Authorization', 'RS256', 'Token not found.', 'aud', 'bearer', 'code', 'description', 'invalid_audience', 'invalid_header', 'invalid_issuer', 'invalid_token', 'iss']

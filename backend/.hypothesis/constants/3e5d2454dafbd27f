@@ -1,0 +1,4 @@
+# file: /workspace/backend/app/routes/auth_routes.py
+# hypothesis_version: 6.142.3
+
+[200, 201, 400, 404, 500, '/sync', '/user/auth-history', '/user/profile', '@', 'DATABASE_URL', 'GET', 'POST', 'User not found', 'User-Agent', 'action', 'action_details', 'age', 'auth', 'country', 'created_at', 'details', 'email', 'email_verified', 'error', 'event_type', 'events', 'family_name', 'given_name', 'id', 'info', 'ip_address', 'language', 'language_preferred', 'last_login', 'login', 'login_count', 'message', 'metadata', 'mobile', 'name', 'nickname', 'picture', 'roles', 'signup', 'signup_fields', 'sub', 'timestamp', 'user_action', 'user_agent', 'user_id', 'user_login', 'user_signup', 'vaccination_status']
