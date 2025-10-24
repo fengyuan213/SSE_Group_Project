@@ -97,7 +97,11 @@ function AppContent() {
             Home
           </Button>
           <RoleGate requiredRoles={["admin"]}>
-            <Button color="inherit" component={Link} to={ROUTES.ADMIN_DASHBOARD}>
+            <Button
+              color="inherit"
+              component={Link}
+              to={ROUTES.ADMIN_DASHBOARD}
+            >
               Admin
             </Button>
           </RoleGate>
@@ -119,9 +123,9 @@ function AppContent() {
           </Button>
           <RoleGate requiredRoles={["provider"]}>
             <Button
-                color="inherit"
-                component={Link}
-                to={ROUTES.PROVIDER_DASHBOARD}
+              color="inherit"
+              component={Link}
+              to={ROUTES.PROVIDER_DASHBOARD}
             >
               Provider
             </Button>
