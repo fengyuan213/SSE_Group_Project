@@ -6,7 +6,7 @@ from hypothesis import given, strategies as st
 # Ensure backend path is importable
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app import create_app  # your Flask app factory
+from app import create_app  # Flask app factory
 
 # Create Flask test client
 @pytest.fixture(scope="module")
