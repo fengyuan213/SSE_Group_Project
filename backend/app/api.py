@@ -2147,7 +2147,7 @@ def save_user_consent():
     Save user consent for data collection.
     Expected JSON body:
     {
-        "user_id": "uuid-string",
+        "user_id": "auth0-user-id",  # Auth0 ID like "google-oauth2|123..."
         "consent_given": true/false
     }
     """
@@ -2158,7 +2158,7 @@ def save_user_consent():
         if "user_id" not in data or "consent_given" not in data:
             return jsonify({"error": "user_id and consent_given are required"}), 400
 
-        user_id = data["user_id"]
+        auth0_user_id = data["user_id"]
         consent_given = data["consent_given"]
 
         # Get client IP address
@@ -2166,13 +2166,27 @@ def save_user_consent():
 
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # First, get the internal user UUID from Auth0 ID
+                cur.execute(
+                    """
+                    SELECT id FROM users WHERE auth0_user_id = %s
+                    """,
+                    (auth0_user_id,),
+                )
+                user_record = cur.fetchone()
+
+                if not user_record:
+                    return jsonify({"error": "User not found"}), 404
+
+                user_uuid = user_record["id"]
+
                 # Check if consent record already exists
                 cur.execute(
                     """
                     SELECT consent_id FROM user_data_consent
                     WHERE user_id = %s
                     """,
-                    (user_id,),
+                    (user_uuid,),
                 )
                 existing = cur.fetchone()
 
@@ -2187,7 +2201,7 @@ def save_user_consent():
                         WHERE user_id = %s
                         RETURNING consent_id, consent_date
                         """,
-                        (consent_given, ip_address, user_id),
+                        (consent_given, ip_address, user_uuid),
                     )
                 else:
                     # Insert new consent record
@@ -2197,7 +2211,7 @@ def save_user_consent():
                         VALUES (%s, %s, %s)
                         RETURNING consent_id, consent_date
                         """,
-                        (user_id, consent_given, ip_address),
+                        (user_uuid, consent_given, ip_address),
                     )
 
                 result = cur.fetchone()
@@ -2215,22 +2229,38 @@ def save_user_consent():
         return jsonify({"error": str(e)}), 500
 
 
-@api_bp.get("/consent/<user_id>")
-def get_user_consent(user_id):
+@api_bp.get("/consent/<auth0_user_id>")
+def get_user_consent(auth0_user_id):
     """
     Get user's current consent status.
     Returns 404 if no consent record found.
+    Expects Auth0 user ID (e.g., "google-oauth2|123...")
     """
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
+                # First, get the internal user UUID from Auth0 ID
+                cur.execute(
+                    """
+                    SELECT id FROM users WHERE auth0_user_id = %s
+                    """,
+                    (auth0_user_id,),
+                )
+                user_record = cur.fetchone()
+
+                if not user_record:
+                    return jsonify({"error": "User not found"}), 404
+
+                user_uuid = user_record["id"]
+
+                # Now get the consent record
                 cur.execute(
                     """
                     SELECT consent_id, user_id, consent_given, consent_date, ip_address
                     FROM user_data_consent
                     WHERE user_id = %s
                     """,
-                    (user_id,),
+                    (user_uuid,),
                 )
                 consent = cur.fetchone()
 
@@ -2240,7 +2270,7 @@ def get_user_consent(user_id):
                 return jsonify(
                     {
                         "consent_id": consent["consent_id"],
-                        "user_id": consent["user_id"],
+                        "user_id": str(consent["user_id"]),  # Convert UUID to string
                         "consent_given": consent["consent_given"],
                         "consent_date": consent["consent_date"].isoformat(),
                     }

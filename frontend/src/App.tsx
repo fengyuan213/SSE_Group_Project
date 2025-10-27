@@ -44,6 +44,7 @@ import AdminDashboard from "./pages/AdminDashboard.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
 import { RoleGate } from "./components/RoleGate.tsx";
 import AuditPage from "./pages/AuditPage.tsx";
+import { ConsentGate } from "./components/ConsentGate.tsx";
 
 function AppContent() {
   const [status, setStatus] = useState("checking...");
@@ -262,48 +263,74 @@ function AppContent() {
         )}
         <ErrorBoundary>
           <Routes>
-            <Route path={ROUTES.HOME} element={<Dashboard />} />
-            <Route path={ROUTES.NEARBY_SERVICES} element={<NearbyServices />} />
-            <Route path={ROUTES.BOOKING_GENERAL} element={<Booking />} />
-            <Route
-              path={ROUTES.BOOKING_INSPECTION}
-              element={<InspectionBooking />}
-            />
-            <Route path={ROUTES.INSPECTIONS} element={<Inspections />} />
-            <Route
-              path={ROUTES.INSPECTION_DETAILS}
-              element={<InspectionDetails />}
-            />
-            <Route
-              path={ROUTES.PROVIDER_DASHBOARD}
-              element={
-                <ProtectedRoute requiredRoles={["provider"]}>
-                  <ProviderDashboard />
-                </ProtectedRoute>
-              }
-            />
+            {/* DataConsent route must be OUTSIDE ConsentGate to avoid infinite redirect */}
             <Route path={ROUTES.DATA_CONSENT} element={<DataConsent />} />
-            <Route path={ROUTES.PAYMENT} element={<Payment />} />
-            <Route path={ROUTES.CONFIRMATION} element={<Confirmation />} />
-            <Route path={ROUTES.PROFILE} element={<UserProfile />} />
-            <Route
-              path={ROUTES.ADMIN_DASHBOARD}
-              element={
-                <ProtectedRoute requiredRoles={["admin"]}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
 
+            {/* All other routes are protected by ConsentGate */}
             <Route
-              path={ROUTES.AUDIT}
+              path="*"
               element={
-                <ProtectedRoute requiredRoles={["admin"]}>
-                  <AuditPage />
-                </ProtectedRoute>
+                <ConsentGate redirectMode="auto">
+                  <Routes>
+                    <Route path={ROUTES.HOME} element={<Dashboard />} />
+                    <Route
+                      path={ROUTES.NEARBY_SERVICES}
+                      element={<NearbyServices />}
+                    />
+                    <Route
+                      path={ROUTES.BOOKING_GENERAL}
+                      element={<Booking />}
+                    />
+                    <Route
+                      path={ROUTES.BOOKING_INSPECTION}
+                      element={<InspectionBooking />}
+                    />
+                    <Route
+                      path={ROUTES.INSPECTIONS}
+                      element={<Inspections />}
+                    />
+                    <Route
+                      path={ROUTES.INSPECTION_DETAILS}
+                      element={<InspectionDetails />}
+                    />
+                    <Route
+                      path={ROUTES.PROVIDER_DASHBOARD}
+                      element={
+                        <ProtectedRoute requiredRoles={["provider"]}>
+                          <ProviderDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route path={ROUTES.PAYMENT} element={<Payment />} />
+                    <Route
+                      path={ROUTES.CONFIRMATION}
+                      element={<Confirmation />}
+                    />
+                    <Route path={ROUTES.PROFILE} element={<UserProfile />} />
+                    <Route
+                      path={ROUTES.ADMIN_DASHBOARD}
+                      element={
+                        <ProtectedRoute requiredRoles={["admin"]}>
+                          <AdminDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path={ROUTES.AUDIT}
+                      element={
+                        <ProtectedRoute requiredRoles={["admin"]}>
+                          <AuditPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="*"
+                      element={<Navigate to={ROUTES.HOME} replace />}
+                    />
+                  </Routes>
+                </ConsentGate>
               }
             />
-            <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
         </ErrorBoundary>
       </Container>

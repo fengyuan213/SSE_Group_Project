@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Card,
@@ -23,31 +25,78 @@ import PaymentIcon from "@mui/icons-material/Payment";
 import PersonIcon from "@mui/icons-material/Person";
 import VerifiedUserIcon from "@mui/icons-material/VerifiedUser";
 import WarningIcon from "@mui/icons-material/Warning";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { consentApi } from "../lib/api";
 
 export default function DataConsent() {
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth0();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [consentGiven, setConsentGiven] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
+  const [initialLoading, setInitialLoading] = useState<boolean>(true);
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [existingConsent, setExistingConsent] = useState<boolean | null>(null);
 
-  // For demo purposes, using a mock user ID
-  // In production, this would come from authentication context
-  const mockUserId = "550e8400-e29b-41d4-a716-446655440000";
+  // Get the return path from navigation state
+  const returnTo = (location.state as { returnTo?: string })?.returnTo || "/";
+
+  // Load existing consent on mount
+  useEffect(() => {
+    const loadConsent = async () => {
+      if (!isAuthenticated || !user?.sub || authLoading) {
+        setInitialLoading(false);
+        return;
+      }
+
+      try {
+        const consent = await consentApi.getConsent(user.sub);
+        setExistingConsent(consent.consent_given);
+        setConsentGiven(consent.consent_given);
+        if (consent.consent_given) {
+          setSubmitted(true);
+          setSuccessMessage(
+            `You previously gave consent on ${new Date(
+              consent.consent_date
+            ).toLocaleDateString()}.`
+          );
+        }
+      } catch (err) {
+        // 404 is expected if no consent exists yet
+        const error = err as { response?: { status?: number } };
+        if (error.response?.status !== 404) {
+          console.error("Error loading consent:", err);
+        }
+      } finally {
+        setInitialLoading(false);
+      }
+    };
+
+    loadConsent();
+  }, [user, isAuthenticated, authLoading]);
 
   const handleSubmit = async () => {
+    if (!isAuthenticated || !user?.sub) {
+      setError("You must be logged in to submit consent.");
+      return;
+    }
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      await consentApi.saveConsent(mockUserId, consentGiven);
+      await consentApi.saveConsent(user.sub, consentGiven);
       setSubmitted(true);
+      setExistingConsent(consentGiven);
       if (consentGiven) {
-        setSuccessMessage(
-          "Thank you for consenting! You can now use all features of our application."
-        );
+        setSuccessMessage("Thank you for consenting! Redirecting you back...");
+
+        // Redirect back after a short delay
+        setTimeout(() => {
+          navigate(returnTo, { replace: true });
+        }, 2000);
       } else {
         setError(
           "You must consent to data collection to use this application. Without consent, we cannot provide our services."
@@ -93,6 +142,26 @@ export default function DataConsent() {
         "Your name and preferences to provide personalized service and improve user experience.",
     },
   ];
+
+  // Show loading while checking authentication
+  if (authLoading || initialLoading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  // Show message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Box sx={{ maxWidth: 900, mx: "auto", py: 4 }}>
+        <Alert severity="warning">
+          You must be logged in to manage your data consent preferences.
+        </Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ maxWidth: 900, mx: "auto", py: 4 }}>
@@ -179,6 +248,27 @@ export default function DataConsent() {
             </Typography>
           </CardContent>
         </Card>
+
+        {/* Show existing consent status */}
+        {existingConsent !== null && !submitted && (
+          <Alert
+            severity={existingConsent ? "success" : "warning"}
+            icon={existingConsent ? <CheckCircleIcon /> : <WarningIcon />}
+            sx={{ mb: 3 }}
+          >
+            <strong>Current Status:</strong>{" "}
+            {existingConsent
+              ? "You have already given consent to data collection."
+              : "You have not given consent to data collection."}
+          </Alert>
+        )}
+
+        {/* Show return path if coming from another page */}
+        {returnTo !== "/" && (
+          <Alert severity="info" sx={{ mb: 3 }}>
+            Please give consent to continue to your requested page.
+          </Alert>
+        )}
 
         {!submitted ? (
           <>
