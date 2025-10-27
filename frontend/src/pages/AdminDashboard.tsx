@@ -18,6 +18,7 @@ import {
   TableRow,
   Chip,
   Button,
+  Link,
 } from "@mui/material";
 import {
   People,
@@ -27,6 +28,8 @@ import {
 } from "@mui/icons-material";
 import { adminApi, type SystemStats, type AdminUser } from "../lib/api";
 import { useUserRoles } from "../auth/useUserRoles";
+import { RoleGate } from "../components/RoleGate";
+import { ROUTES } from "../lib/routes";
 
 /**
  * Admin Dashboard - Only accessible to users with 'admin' role
@@ -176,6 +179,24 @@ export default function AdminDashboard() {
                       {stats.active_users_7_days}
                     </Typography>
                   </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <Card>
+              <CardContent>
+                <Box display="flex" alignItems="center" gap={2}>
+                  {/* Navigate to the audit log */}
+                  <RoleGate requiredRoles={["admin"]}>
+                    <Button
+                      color="inherit"
+                      component={Link}
+                      href={ROUTES.AUDIT}
+                    >
+                      Audit Logs
+                    </Button>
+                  </RoleGate>
                 </Box>
               </CardContent>
             </Card>

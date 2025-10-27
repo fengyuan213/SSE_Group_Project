@@ -297,7 +297,15 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/audit" element={<AuditPage />} />
+
+            <Route
+              path={ROUTES.AUDIT}
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <AuditPage />
+                </ProtectedRoute>
+              }
+            />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
         </ErrorBoundary>
