@@ -168,11 +168,12 @@ def sync_user():
             user_result = cursor.fetchone()
             user_id = user_result["id"]
 
-            # Assign default 'customer' role to new user
+            # Assign both 'provider' and 'customer' roles to new user
+            # This allows users to both book services and provide services
             cursor.execute(
                 """
                 INSERT INTO user_roles (user_id, role_id)
-                SELECT %s, role_id FROM roles WHERE role_name = 'customer'
+                SELECT %s, role_id FROM roles WHERE role_name IN ('provider', 'customer')
             """,
                 (user_id,),
             )
@@ -295,6 +296,95 @@ def get_user_profile():
 
     except Exception as e:
         print(f"Error in get_user_profile: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+
+@auth_bp.route("/user/profile", methods=["PUT"])
+@requires_auth
+def update_user_profile():
+    """Update the current user's profile"""
+    try:
+        auth0_id = request.user.get("sub")
+        data = request.get_json()
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Get current user
+        cursor.execute(
+            "SELECT id, metadata FROM users WHERE auth0_user_id = %s", (auth0_id,)
+        )
+        user = cursor.fetchone()
+
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get current metadata
+        metadata = user["metadata"] or {}
+
+        # Update metadata with new values
+        if "age" in data:
+            metadata["age"] = data["age"]
+        if "mobile" in data:
+            metadata["mobile"] = data["mobile"]
+        if "country_of_citizenship" in data:
+            metadata["country_of_citizenship"] = data["country_of_citizenship"]
+        if "language_preferred" in data:
+            metadata["language_preferred"] = data["language_preferred"]
+        if "covid_vaccination_status" in data:
+            metadata["covid_vaccination_status"] = data["covid_vaccination_status"]
+
+        # Update basic fields and metadata
+        cursor.execute(
+            """
+            UPDATE users
+            SET given_name = %s,
+                family_name = %s,
+                nickname = %s,
+                metadata = %s,
+                updated_at = %s
+            WHERE auth0_user_id = %s
+            RETURNING id
+        """,
+            (
+                data.get("given_name"),
+                data.get("family_name"),
+                data.get("nickname"),
+                json.dumps(metadata),
+                datetime.now(),
+                auth0_id,
+            ),
+        )
+
+        # Log the update ()
+        """cursor.execute(
+            INSERT INTO audit_logs (user_id, log_type, action, action_details, severity, ip_address)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ,
+            (
+                user["id"],
+                "user_action",
+                "profile_update",
+                json.dumps({"updated_fields": list(data.keys())}),
+                "info",
+                request.remote_addr,
+            ),
+        )
+        """
+
+        conn.commit()
+
+        return jsonify({"message": "Profile updated successfully"}), 200
+
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        print(f"Error in update_user_profile: {str(e)}")
         return jsonify({"error": str(e)}), 500
     finally:
         if cursor:

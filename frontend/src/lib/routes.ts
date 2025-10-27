@@ -17,6 +17,7 @@ export const ROUTES = {
   PROVIDER_DASHBOARD: "/provider",
   NEARBY_SERVICES: "/nearby-services",
   DATA_CONSENT: "/data-consent",
+  ADMIN_DASHBOARD: "/admin",
 } as const;
 
 /**
