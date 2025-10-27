@@ -43,6 +43,7 @@ import DataConsent from "./pages/DataConsent";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.tsx";
 import { RoleGate } from "./components/RoleGate.tsx";
+import AuditPage from "./pages/AuditPage.tsx";
 
 function AppContent() {
   const [status, setStatus] = useState("checking...");
@@ -55,7 +56,7 @@ function AppContent() {
   useEffect(() => {
     api
       .get("/health")
-      .then((r) => setStatus(r.data.status))
+      .then((r) => setStatus((r.data as { status?: string })?.status ?? "down"))
       .catch(() => setStatus("down"));
   }, []);
 
@@ -135,6 +136,13 @@ function AppContent() {
           </Button>
 
           <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 1 }}>
+
+          {/* Navigate to the audit log */}
+          <Button color="inherit" component={Link} to="/audit">
+            Audit Logs
+          </Button>
+
+          <Box sx={{ ml: 2 }}>
             <Chip
               size="small"
               label={`API: ${status}`}
@@ -289,6 +297,7 @@ function AppContent() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/audit" element={<AuditPage />} />
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>
         </ErrorBoundary>
