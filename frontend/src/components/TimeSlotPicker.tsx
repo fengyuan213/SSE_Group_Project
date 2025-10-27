@@ -7,7 +7,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import Grid from "@mui/material/Grid2";
-import { availabilityApi } from "../lib/api";
+import { availabilityApi, type TimeSlot } from "../lib/api";
 
 interface TimeSlotPickerProps {
   packageId: number;
@@ -23,7 +23,7 @@ export default function TimeSlotPicker({
   onSlotSelect,
 }: TimeSlotPickerProps) {
   const [loading, setLoading] = useState(true);
-  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<TimeSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,9 +92,9 @@ export default function TimeSlotPicker({
 
   // Group slots by time period
   const groupedSlots = useMemo(() => {
-    const morning: any[] = [];
-    const afternoon: any[] = [];
-    const evening: any[] = [];
+    const morning: TimeSlot[] = [];
+    const afternoon: TimeSlot[] = [];
+    const evening: TimeSlot[] = [];
 
     availableSlots.forEach((slot) => {
       const hour = parseInt(slot.start_time.split(":")[0]);
@@ -139,7 +139,7 @@ export default function TimeSlotPicker({
     );
   }
 
-  const renderSlotGroup = (slots: any[], title: string) => {
+  const renderSlotGroup = (slots: TimeSlot[], title: string) => {
     if (slots.length === 0) return null;
 
     return (

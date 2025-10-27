@@ -1,6 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
+import type { ReactNode } from "react";
 import { CircularProgress, Container, Alert, Box } from "@mui/material";
 import { useUserRoles } from "../auth/useUserRoles";
 
@@ -31,7 +30,6 @@ export const ProtectedRoute = ({
   children,
   requiredRoles = [],
   requireAllRoles = false,
-  fallbackPath = "/",
 }: ProtectedRouteProps) => {
   const {
     isAuthenticated,
@@ -95,18 +93,4 @@ export const ProtectedRoute = ({
 
   // User is authenticated and authorized
   return <>{children}</>;
-};
-
-/**
- * Higher-order component version of ProtectedRoute
- */
-export const withProtectedRoute = (
-  Component: React.ComponentType,
-  requiredRoles?: string[]
-) => {
-  return (props: any) => (
-    <ProtectedRoute requiredRoles={requiredRoles}>
-      <Component {...props} />
-    </ProtectedRoute>
-  );
 };

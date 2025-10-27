@@ -135,12 +135,9 @@ function AppContent() {
             Data Consent
           </Button>
 
-          <Box sx={{ ml: 2, display: "flex", alignItems: "center", gap: 1 }}>
-
-          {/* Navigate to the audit log */}
-          <Button color="inherit" component={Link} to="/audit">
-            Audit Logs
-          </Button>
+          <Box
+            sx={{ ml: 2, display: "flex", alignItems: "center", gap: 1 }}
+          ></Box>
 
           <Box sx={{ ml: 2 }}>
             <Chip
