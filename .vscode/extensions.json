@@ -1,9 +1,9 @@
 {
-    "recommendations": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "ms-python.black-formatter",
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-    ]
+  "recommendations": [
+    // Note: Most extensions are auto-installed via devcontainer.json
+    // These are additional optional extensions for local development
+    "mechatroner.rainbow-csv",
+    "pkief.material-icon-theme",
+    "tomoki1207.pdf"
+  ]
 }

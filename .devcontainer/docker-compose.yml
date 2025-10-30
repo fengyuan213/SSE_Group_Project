@@ -1,0 +1,92 @@
+version: "3.8"
+
+services:
+  # Main development container
+  app:
+    # Use pre-built image from GitHub Container Registry for faster loading
+    # Falls back to local build if image is not available
+    #
+    # IMPORTANT: If this builds instead of pulling:
+    #   1. Make sure image is public: https://github.com/fengyuan213?tab=packages
+    #   2. Or run: docker login ghcr.io -u YOUR_GITHUB_USERNAME
+    #   3. Or run: .devcontainer/pull-image.sh before opening container
+    image: ghcr.io/fengyuan213/sse_group_project/devcontainer:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      # Mount entire workspace
+      - ..:/workspace:cached
+      # Git configuration (commented out to avoid conflicts, container has its own config)
+      # - ~/.gitconfig:/home/vscode/.gitconfig:ro
+      - ~/.ssh:/home/vscode/.ssh:ro
+
+    command: sleep infinity
+
+    environment:
+      # Node.js environment variables
+      - NODE_ENV=development
+      # Python environment variables
+      - PYTHONUNBUFFERED=1
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      # Database connection string
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/sse_project
+      # Other environment variables
+      - TZ=UTC
+
+    depends_on:
+      - db
+
+    networks:
+      - dev-network
+
+    # Port mapping
+    ports:
+      - "5173:5173" # Frontend (Vite default)
+      - "5000:5000" # Backend (Flask)
+
+    # Resource limits (optional)
+    #deploy:
+    #  resources:
+    #    limits:
+    #      cpus: "4"
+    #      memory: 4G
+
+  # PostgreSQL database
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=sse_project
+      - PGDATA=/var/lib/postgresql/data/pgdata
+
+    volumes:
+      # Persist database data
+      - postgres-data:/var/lib/postgresql/data
+      # Initialization scripts
+      - ../backend/schema:/docker-entrypoint-initdb.d:ro
+
+    networks:
+      - dev-network
+
+    ports:
+      - "5432:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+networks:
+  dev-network:
+    driver: bridge
+
+volumes:
+  postgres-data:
+    driver: local
+  pgadmin-data:
+    driver: local

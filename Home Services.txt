@@ -1,0 +1,44 @@
+User registration and login interface 
+As a Home Services app, it is essential to have a user sign up and login interface. For a new user, they may need to register their identifiable personal information to the app, which will be further used when you get a new job accepted. The information required in the register could include name, age, mobile, email, country of citizenship, language preferred, Covid-19 vaccinated or not, or credit card bundle, trade, and profession. You may consider some security and privacy functionalities to protect user¡¯s private information from leaching. In addition, log in with Google/Facebook/WeChat account could be a popular and easy-to- use solution, but it may also lead to some security issues. 
+For a registered user, there should be a login interface that requires a username and password. You may 
+consider some security solutions to protect user¡¯s passwords. 
+
+Please note that the sign-up and login interface will be considered essential functionality. If your team decision is not to build this function, it would be better to consider a better solution to identify your users and provide services to them. Looking forward to any new ideas. 
+Special General service 
+
+The special general service mainly focuses on having a general inspection of a house and come up with a list of urgent work that needs to be done to keep the house secure and safe. The client can then book for some or all the services mentioned in this list or more. The duration of the service could be a few hours or several days, and the worker can do more than one job at the same time. 
+To book the service, a user may need to provide some information such as: 
+
+.Name, mobile, and/or email
+
+.Type of Service.
+
+.Preferred dates and duration of the service.
+
+.Preferred Cost of service.
+
+.Add more details as suited.
+
+
+Users could fill in the information through the interface which will further transfer the data to the back- end server, which means that you need to maintain a simple database to store the information. You may also consider how to send feedback to users to confirm the booking. Again, try your best to provide a secure and privacy-preserving solution. Furthermore, some functionalities concerning Covid could be considered. 
+Service package 
+
+A service package includes doing the whole list of recommended services at a cheaper rate, which may be customized in case of cost-saving. To make the service package more attractive, you may consider an interface that provides detailed enough information, such as photos, descriptions, customized options, experiences, users feedback, renovation plans, and, most important, the price. Users could explore and book Service packages, and then register their information through interfaces, please refer to the previous description. You may consider more fancy functionalities, such as search, sort, or compare. 
+Specific Service booking 
+Users can search for a nearby service and make a booking. This is a simple idea but may need much more data/information involved. For example, you may need to list nearby people who provide certain services or display the location of their location on a map, which means that you may also require users¡¯ current location. You may consider some off-the-shelf API, such as the Google map, but also implement your innovation into it. For example, display the Covid restriction or booking limitations. 
+Other functionalities could be considered: 
+ 
+. A payment method 
+
+. Confirmation letter 
+
+. QR code tickets 
+
+. Payment request letter 
+
+. Reminder system 
+
+. Voucher/discount code 
+
+
+
