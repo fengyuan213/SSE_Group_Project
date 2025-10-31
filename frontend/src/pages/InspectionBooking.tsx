@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   Box,
   Button,
@@ -16,12 +17,18 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
-import { inspectionApi } from "../lib/api";
+import { inspectionApi, authApi } from "../lib/api";
 import { ROUTES } from "../lib/routes";
 import { CheckCircle } from "@mui/icons-material";
 
 export default function InspectionBooking() {
   const navigate = useNavigate();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    getAccessTokenSilently,
+    loginWithRedirect,
+  } = useAuth0();
 
   // Form state
   const [name, setName] = useState("");
@@ -43,10 +50,45 @@ export default function InspectionBooking() {
     inspection_status: string;
   } | null>(null);
 
-  // Mock user_id - in production, this would come from Auth0
-  const userId =
-    localStorage.getItem("mock_user_id") ||
-    "00000000-0000-0000-0000-000000000123";
+  // User ID from backend
+  const [userId, setUserId] = useState<string | null>(null);
+  const [userProfileLoading, setUserProfileLoading] = useState(true);
+
+  // Fetch user profile to get database user_id
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || authLoading) {
+        setUserProfileLoading(false);
+        return;
+      }
+
+      try {
+        const token = await getAccessTokenSilently();
+        const profile = await authApi.getUserProfile(token);
+
+        setUserId(profile.user_id);
+        setName(profile.name || "");
+        setEmail(profile.email || "");
+        setPhone(profile.mobile || "");
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        setError("Failed to load user profile. Please try again.");
+      } finally {
+        setUserProfileLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, authLoading, getAccessTokenSilently]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      loginWithRedirect({
+        appState: { returnTo: ROUTES.INSPECTION_BOOKING },
+      });
+    }
+  }, [isAuthenticated, authLoading, loginWithRedirect]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,6 +99,15 @@ export default function InspectionBooking() {
       // Validate form
       if (!name || !email || !address || !inspectionDate) {
         setError("Please fill in all required fields");
+        setLoading(false);
+        return;
+      }
+
+      // Ensure userId is available
+      if (!userId) {
+        setError(
+          "User authentication failed. Please refresh the page and try again."
+        );
         setLoading(false);
         return;
       }
@@ -84,6 +135,20 @@ export default function InspectionBooking() {
       setLoading(false);
     }
   };
+
+  // Show loading while checking authentication and fetching user profile
+  if (authLoading || userProfileLoading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="60vh"
+      >
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
   if (success && bookingResult) {
     return (
