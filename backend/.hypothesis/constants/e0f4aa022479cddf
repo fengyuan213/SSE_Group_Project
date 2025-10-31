@@ -1,0 +1,4 @@
+# file: /workspace/backend/app/__init__.py
+# hypothesis_version: 6.142.3
+
+['*', '.env', '/', '/api', '/api/*', '/api/auth', 'Authorization', 'CORS_ORIGIN', 'Content-Type', 'DELETE', 'GET', 'OPTIONS', 'POST', 'PUT', 'allow_headers', 'methods', 'origins']

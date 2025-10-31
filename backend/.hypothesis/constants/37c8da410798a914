@@ -1,0 +1,4 @@
+# file: /workspace/backend/app/email_service.py
+# hypothesis_version: 6.142.3
+
+['RESEND_API_KEY', 'RESEND_FROM_EMAIL', 'from', 'html', 'subject', 'to']
