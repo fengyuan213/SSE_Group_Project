@@ -18,9 +18,18 @@
 -- ╚═══════════════════════════════════════════════════════════════════════╝
 
 -- Single user configuration (most common)
+\set TARGET_EMAIL '''fengyuan.liu@live.com'''
 \set TARGET_EMAIL '''liufengyuan2015@gmail.com'''
+
 \set TARGET_ROLE '''admin'''
 
+\echo '✅ Granting role to user...'
+INSERT INTO user_roles (user_id, role_id)
+SELECT
+    (SELECT id FROM users WHERE email = :TARGET_EMAIL),
+    (SELECT role_id FROM roles WHERE role_name = :TARGET_ROLE)
+ON CONFLICT (user_id, role_id) DO NOTHING;
+\echo '✅ Done! Role granted.'
 -- Multiple users (for batch operations)
 -- \set USER_LIST '''user1@example.com'', ''user2@example.com'', ''user3@example.com'''
 
@@ -240,7 +249,7 @@ ORDER BY u.email;
 --    ON CONFLICT (user_id, role_id) DO NOTHING prevents duplicate errors
 --
 -- 🔄 Default Roles (Automatic on First Login)
---    New users automatically get: provider + customer
+--    New users automatically get: customer
 --    (configured in backend/app/routes/auth_routes.py)
 --
 -- 👑 Admin Role

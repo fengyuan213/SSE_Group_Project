@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth0 } from "@auth0/auth0-react";
 import {
   Box,
   Button,
@@ -22,21 +23,57 @@ import {
   ArrowForward,
 } from "@mui/icons-material";
 import dayjs from "dayjs";
-import { inspectionApi, type Inspection } from "../lib/api";
+import { inspectionApi, authApi, type Inspection } from "../lib/api";
 import { ROUTES, buildInspectionDetailsRoute } from "../lib/routes";
 
 export default function Inspections() {
   const navigate = useNavigate();
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    getAccessTokenSilently,
+    loginWithRedirect,
+  } = useAuth0();
+
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  // Mock user_id - in production, this would come from Auth0
-  const userId =
-    localStorage.getItem("mock_user_id") ||
-    "00000000-0000-0000-0000-000000000123";
+  // Fetch user profile to get database user_id
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!isAuthenticated || authLoading) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const token = await getAccessTokenSilently();
+        const profile = await authApi.getUserProfile(token);
+        setUserId(profile.user_id);
+      } catch (err) {
+        console.error("Failed to fetch user profile:", err);
+        setError("Failed to load user profile. Please try again.");
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [isAuthenticated, authLoading, getAccessTokenSilently]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      loginWithRedirect({
+        appState: { returnTo: ROUTES.INSPECTIONS },
+      });
+    }
+  }, [isAuthenticated, authLoading, loginWithRedirect]);
 
   const loadInspections = useCallback(async () => {
+    if (!userId) return;
+
     try {
       setLoading(true);
       const data = await inspectionApi.getInspections(userId);
@@ -52,8 +89,10 @@ export default function Inspections() {
   }, [userId]);
 
   useEffect(() => {
-    loadInspections();
-  }, [loadInspections]);
+    if (userId) {
+      loadInspections();
+    }
+  }, [userId, loadInspections]);
 
   const getStatusColor = (
     status: string

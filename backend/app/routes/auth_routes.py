@@ -168,12 +168,12 @@ def sync_user():
             user_result = cursor.fetchone()
             user_id = user_result["id"]
 
-            # Assign both 'provider' and 'customer' roles to new user
-            # This allows users to both book services and provide services
+            # Assign 'customer' role to new user
+            # Users can book services; provider role must be granted manually
             cursor.execute(
                 """
                 INSERT INTO user_roles (user_id, role_id)
-                SELECT %s, role_id FROM roles WHERE role_name IN ('provider', 'customer')
+                SELECT %s, role_id FROM roles WHERE role_name = 'customer'
             """,
                 (user_id,),
             )
